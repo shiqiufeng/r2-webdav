@@ -14,7 +14,6 @@ import {
   APP_TAGLINE,
   APP_VERSION,
   AUTHOR,
-  AUTHOR_DESC,
   DONATE_LINES,
   LICENSE_NAME,
   REPO_URL,
@@ -1316,7 +1315,7 @@ svg{display:block;flex:none}
       <p class="ab-desc">${APP_TAGLINE}</p>
 
       <div class="ab-rows">
-        <div class="ab-row"><span class="k">作者</span><span class="v">${AUTHOR} · ${AUTHOR_DESC}</span></div>
+        <div class="ab-row"><span class="k">作者</span><span class="v">${AUTHOR}</span></div>
         <div class="ab-row"><span class="k">项目地址</span><span class="v"><a href="${REPO_URL}" target="_blank" rel="noopener noreferrer">${REPO_URL.replace("https://", "")}</a></span></div>
         <div class="ab-row"><span class="k">技术栈</span><span class="v">Workers · R2 · Durable Objects</span></div>
         <div class="ab-row"><span class="k">开源协议</span><span class="v">${LICENSE_NAME}</span></div>

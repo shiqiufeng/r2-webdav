@@ -7,7 +7,6 @@ export const APP_VERSION = "1.3.0";
 export const APP_TAGLINE = "基于 Cloudflare Workers + R2 的 WebDAV 网盘，前后端都在一个 Worker 里。";
 
 export const AUTHOR = "流水";
-export const AUTHOR_DESC = "独立开发者";
 export const REPO_URL = "https://github.com/shiqiufeng/r2-webdav";
 export const LICENSE_NAME = "MIT";
 
