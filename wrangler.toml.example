@@ -1,0 +1,57 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "r2-webdav"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+workers_dev = true
+
+# ---------------------------------------------------------------------------
+# R2 存储桶绑定
+# 先把 bucket 名字改成你自己的（需先创建）：
+#   npx wrangler r2 bucket create weddav
+# ---------------------------------------------------------------------------
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "weddav"   # 改成你自己的存储桶名
+
+# ---------------------------------------------------------------------------
+# Durable Object：保存 LOCK / UNLOCK 的锁状态（Class 2 必需）
+# 免费计划必须使用 SQLite 后端（new_sqlite_classes）
+# ---------------------------------------------------------------------------
+[[durable_objects.bindings]]
+name = "LOCKS"
+class_name = "LockDO"
+
+# ---------------------------------------------------------------------------
+# Durable Object：保存外链分享记录（创建 / 查询 / 撤销 / 下载计数）
+# 放 DO 而不是 KV，是因为撤销要求强一致 —— KV 有最终一致延迟，
+# 取消分享后还能下载几秒到几十秒是不可接受的。
+# ---------------------------------------------------------------------------
+[[durable_objects.bindings]]
+name = "SHARES"
+class_name = "ShareDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LockDO"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["ShareDO"]
+
+# ---------------------------------------------------------------------------
+# 明文变量（密码不要写这里，用 wrangler secret put）
+# ---------------------------------------------------------------------------
+[vars]
+WEBDAV_USER = "admin"
+# 锁的默认超时（秒），客户端可通过 Timeout 头协商
+LOCK_TIMEOUT = "3600"
+# 设为 "1" 则整个挂载点只读
+READ_ONLY = "0"
+
+# ---------------------------------------------------------------------------
+# 自定义域名（可选）。workers.dev 域名在国内网络常被阻断，建议绑一个自有域名。
+# 绑定时把下面的注释去掉并换成你的域名；该域名必须先托管在同一个 Cloudflare 账号下。
+# ---------------------------------------------------------------------------
+# [[routes]]
+# pattern = "dav.example.com"
+# custom_domain = true

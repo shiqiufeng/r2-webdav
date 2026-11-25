@@ -1,0 +1,11 @@
+node_modules/
+.wrangler/
+.dev.vars
+dist/
+*.log
+
+# 本地部署配置（含真实域名与账号），开源仓库里只放 wrangler.toml.example
+wrangler.toml
+# 编辑器/工作区缓存
+.workbuddy/
+.tmp-test/

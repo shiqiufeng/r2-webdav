@@ -1,0 +1,20 @@
+{
+  "name": "r2-webdav",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WebDAV (Class 1 + Class 2) gateway for Cloudflare R2, running on Cloudflare Workers",
+  "author": "流水",
+  "license": "MIT",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261123.1",
+    "typescript": "^5.6.3",
+    "wrangler": "^4.0.0"
+  }
+}
