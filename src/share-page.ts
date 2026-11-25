@@ -17,6 +17,10 @@ export function renderSharePage(rec: ShareRecord): string {
   const created = fmtDateTime(rec.createdAt);
   const expireText =
     rec.expiresAt === null ? "长期有效" : `有效期至 ${fmtDateTime(rec.expiresAt)}`;
+  const max = rec.maxDownloads ?? null;
+  const left = max === null ? null : Math.max(0, max - rec.downloads);
+  const quotaText =
+    max === null ? "下载次数不限" : `已下载 ${rec.downloads} / ${max} 次`;
   const kind = rec.isDir ? "dir" : "file";
   /* 老数据可能存的是 application/octet-stream，用扩展名兜底一次，
      否则图片/视频分享页不会出现预览 */
@@ -137,6 +141,7 @@ body{
 .crumb b{color:var(--text);font-weight:600;cursor:pointer}
 .crumb b:hover{color:var(--brand)}
 .crumb .sep{opacity:.45}
+.qleft{font-size:12px;color:var(--text3);margin:0 0 8px}
 .item{
   display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:9px;
   cursor:pointer;border:1px solid transparent;
@@ -183,8 +188,9 @@ body{
         <div class="fname" id="fname"></div>
         <div class="fsub">
           <span id="fsize"></span><i>·</i>
-          <span>${escapeHtml(created)} 分享</span><i>·</i>
-          <span>${escapeHtml(expireText)}</span>
+          <span id="fcreated">${escapeHtml(created)} 分享</span><i>·</i>
+          <span id="fexpire">${escapeHtml(expireText)}</span><i>·</i>
+          <span id="fquota">${escapeHtml(quotaText)}</span>
         </div>
       </div>
     </div>
@@ -201,7 +207,11 @@ var SHARE = {
   name: ${JSON.stringify(rec.name || "未命名")},
   kind: ${JSON.stringify(kind)},
   mime: ${JSON.stringify(mime)},
-  needsPassword: ${rec.needsPassword ? "true" : "false"}
+  needsPassword: ${rec.needsPassword ? "true" : "false"},
+  createdAt: ${JSON.stringify(rec.createdAt)},
+  expiresAt: ${JSON.stringify(rec.expiresAt)},
+  max: ${JSON.stringify(max)},
+  left: ${JSON.stringify(left)}
 };
 var TOKEN_KEY = "dav.share." + SHARE.id;
 var token = "";
@@ -224,6 +234,17 @@ var ICON_DL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 $("fname").textContent = SHARE.name;
 $("fsize").textContent = SHARE.kind === "dir" ? "文件夹" : ${JSON.stringify(sizeText)};
 $("fico").innerHTML = SHARE.kind === "dir" ? ICON_DIR : ICON_FILE;
+
+/* 时间按访问者的本地时区重画；服务端那行是 UTC 文本，只作无脚本时的兜底 */
+function fmtDT(ms){
+  var d = new Date(ms);
+  var p = function(n){ return (n < 10 ? "0" : "") + n; };
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+}
+try {
+  $("fcreated").textContent = fmtDT(SHARE.createdAt) + " 分享";
+  $("fexpire").textContent = SHARE.expiresAt === null ? "长期有效" : "有效期至 " + fmtDT(SHARE.expiresAt);
+} catch(e){}
 
 try {
   var saved = sessionStorage.getItem(TOKEN_KEY);
@@ -318,8 +339,10 @@ function renderMain(){
       pv = '<div class="pv pv-pdf"><iframe id="pvPdf" title="PDF 预览"></iframe></div>';
     }
     $("body").innerHTML = pv +
-      '<button class="btn btn-block" id="dl1">' + ICON_DL + (pk === "text" ? "下载文件" : "下载文件") + '</button>' +
-      '<div class="hint">点击后开始下载，文件会保存到你本机</div>' +
+      '<button class="btn btn-block" id="dl1">' + ICON_DL + "下载文件" + '</button>' +
+      '<div class="hint">' + (SHARE.max === null
+        ? "点击后开始下载，文件会保存到你本机"
+        : "点击后开始下载，本次下载后还剩 " + SHARE.left + " 次") + '</div>' +
       '<div class="safety">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>' +
         '<span>请确认文件来源可信后再打开，尤其是可执行文件与压缩包</span>' +
@@ -331,10 +354,20 @@ function renderMain(){
     if(pk === "audio") $("pvAud").src = inlineSrc;
     if(pk === "pdf") $("pvPdf").src = inlineSrc;
 
-    $("dl1").onclick = function(){ window.location.href = rawUrl(""); };
+    $("dl1").onclick = function(){ bumpLocal(); window.location.href = rawUrl(""); };
     return;
   }
   renderDir("");
+}
+
+/* 下载后本地的剩余次数立刻减一，不必等刷新 */
+function bumpLocal(){
+  if(SHARE.max === null) return;
+  SHARE.left = Math.max(0, SHARE.left - 1);
+  var q = $("qleft");
+  if(q) q.textContent = "剩余可下载 " + SHARE.left + " 次（预览不计次）";
+  var h = document.querySelector(".hint");
+  if(h && SHARE.kind === "file") h.textContent = "点击后开始下载，本次下载后还剩 " + SHARE.left + " 次";
 }
 
 function qs(p){
@@ -349,7 +382,9 @@ function rawUrl(p){
 }
 
 function renderDir(sub){
-  $("body").innerHTML = '<div id="crumbs"></div><div class="list" id="list"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>';
+  $("body").innerHTML = '<div id="crumbs"></div>' +
+    (SHARE.max === null ? "" : '<div class="qleft" id="qleft">剩余可下载 ' + SHARE.left + ' 次（预览不计次）</div>') +
+    '<div class="list" id="list"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>';
   api("/__s/" + SHARE.id + "/list" + qs(sub))
     .then(function(r){
       if(r.status === 401){ token = ""; try{ sessionStorage.removeItem(TOKEN_KEY); }catch(e){} renderPassword("会话已过期，请重新输入提取码"); throw new Error("__handled__"); }
@@ -380,12 +415,13 @@ function renderDir(sub){
         el.addEventListener("click", function(e){
           if(e.target.closest("[data-dl]")) return;
           if(isDir) renderDir(rel);
-          else window.location.href = rawUrl(rel);
+          else { bumpLocal(); window.location.href = rawUrl(rel); }
         });
       });
       Array.prototype.forEach.call($("list").querySelectorAll("[data-dl]"), function(b){
         b.addEventListener("click", function(e){
           e.stopPropagation();
+          bumpLocal();
           window.location.href = rawUrl(b.getAttribute("data-dl"));
         });
       });

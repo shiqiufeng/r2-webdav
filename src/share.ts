@@ -29,6 +29,8 @@ export interface ShareRecord {
   contentType?: string | null;
   /** 下载次数 */
   downloads: number;
+  /** 允许下载的最大次数，null / undefined = 不限 */
+  maxDownloads?: number | null;
   /** 最近一次访问时间 */
   lastAccess: number | null;
 }
@@ -44,6 +46,7 @@ export interface ShareView {
   expiresAt: number | null;
   needsPassword: boolean;
   downloads: number;
+  maxDownloads: number | null;
   lastAccess: number | null;
   url: string;
 }
@@ -59,6 +62,7 @@ export function toView(rec: ShareRecord, origin: string): ShareView {
     expiresAt: rec.expiresAt,
     needsPassword: rec.needsPassword,
     downloads: rec.downloads,
+    maxDownloads: rec.maxDownloads ?? null,
     lastAccess: rec.lastAccess,
     url: `${origin}/s/${rec.id}`,
   };
@@ -175,7 +179,10 @@ type DoRequest =
   | { op: "get"; id: string; touch?: boolean }
   | { op: "list" }
   | { op: "revoke"; id: string }
-  | { op: "hit"; id: string };
+  /** 计一次下载（先判上限再自增，DO 单线程保证不超卖） */
+  | { op: "claim"; id: string }
+  /** 只更新访问时间，不计数（预览、HEAD 用） */
+  | { op: "touch"; id: string };
 
 interface DoResponse {
   ok: boolean;
@@ -204,8 +211,10 @@ export class ShareDO implements DurableObject {
           return this.json(await this.list());
         case "revoke":
           return this.json(await this.revoke(req.id));
-        case "hit":
-          return this.json(await this.hit(req.id));
+        case "claim":
+          return this.json(await this.claim(req.id));
+        case "touch":
+          return this.json(await this.touch(req.id));
         default:
           return this.json({ ok: false, error: "unknown op" });
       }
@@ -265,10 +274,26 @@ export class ShareDO implements DurableObject {
     return { ok: true, record: existed ?? null };
   }
 
-  private async hit(id: string): Promise<DoResponse> {
+  /**
+   * 领取一次下载额度。
+   * 上限判断与自增必须在同一次 DO 调用里完成，否则并发请求会把次数用超。
+   */
+  private async claim(id: string): Promise<DoResponse> {
     const rec = await this.state.storage.get<ShareRecord>(KEY_PREFIX + id);
     if (!rec) return { ok: false, error: "not found" };
+    const now = Date.now();
+    if (rec.expiresAt !== null && now > rec.expiresAt) return { ok: false, error: "expired" };
+    const max = rec.maxDownloads ?? null;
+    if (max !== null && rec.downloads >= max) return { ok: false, error: "exhausted" };
     rec.downloads += 1;
+    rec.lastAccess = now;
+    await this.state.storage.put(KEY_PREFIX + id, rec);
+    return { ok: true, record: rec };
+  }
+
+  private async touch(id: string): Promise<DoResponse> {
+    const rec = await this.state.storage.get<ShareRecord>(KEY_PREFIX + id);
+    if (!rec) return { ok: false, error: "not found" };
     rec.lastAccess = Date.now();
     await this.state.storage.put(KEY_PREFIX + id, rec);
     return { ok: true, record: rec };
@@ -317,8 +342,22 @@ export async function revokeShareRecord(env: Env, id: string): Promise<ShareReco
   return res.record ?? null;
 }
 
-export async function bumpShareHit(env: Env, id: string): Promise<void> {
-  await call(env, { op: "hit", id });
+export interface ClaimResult {
+  ok: boolean;
+  /** not-found / expired / exhausted */
+  reason?: string;
+  record?: ShareRecord | null;
+}
+
+/** 计一次下载；达到上限时 ok=false 且不计数 */
+export async function claimShareDownload(env: Env, id: string): Promise<ClaimResult> {
+  const res = await call(env, { op: "claim", id });
+  return { ok: res.ok, reason: res.error, record: res.record ?? null };
+}
+
+/** 仅记录访问时间（预览、HEAD 不消耗下载次数） */
+export async function touchShareAccess(env: Env, id: string): Promise<void> {
+  await call(env, { op: "touch", id });
 }
 
 /* ================================================================== */
@@ -333,6 +372,18 @@ export function shareName(path: string, fallback = "未命名"): string {
 
 export function isExpired(rec: ShareRecord): boolean {
   return rec.expiresAt !== null && Date.now() > rec.expiresAt;
+}
+
+/** 下载次数是否已用完（未设上限永远为 false） */
+export function isDownloadExhausted(rec: ShareRecord): boolean {
+  const max = rec.maxDownloads ?? null;
+  return max !== null && rec.downloads >= max;
+}
+
+/** 剩余可下载次数，null = 不限 */
+export function remainingDownloads(rec: ShareRecord): number | null {
+  const max = rec.maxDownloads ?? null;
+  return max === null ? null : Math.max(0, max - rec.downloads);
 }
 
 export function fmtSize(n: number): string {

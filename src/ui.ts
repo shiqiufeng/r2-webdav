@@ -418,6 +418,17 @@ svg{display:block;flex:none}
   height:32px;border-radius:8px;border:1px solid var(--border);background:var(--bg);
   color:var(--text);font-size:12.5px;font-family:inherit;padding:0 8px;outline:none;cursor:pointer;
 }
+.opt-ctl{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+.exp-custom{display:flex;align-items:center;gap:5px}
+.num-mini{
+  height:32px;width:68px;border-radius:8px;border:1px solid var(--border);background:var(--bg);
+  color:var(--text);font-size:12.5px;font-family:inherit;padding:0 7px;outline:none;
+  font-variant-numeric:tabular-nums;
+}
+.num-mini:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-weak)}
+.num-mini::placeholder{color:var(--text3);font-size:12px}
+.dl-limit{display:flex;align-items:center;gap:5px}
+.dl-limit .unit{font-size:12px;color:var(--text3)}
 .share-result{
   border:1px solid var(--border2);border-radius:12px;padding:14px;background:var(--bg);margin-bottom:16px;
 }
@@ -505,6 +516,7 @@ svg{display:block;flex:none}
 .sp-row .si-meta em{font-style:normal}
 .sp-badge{display:inline-block;font-size:10px;padding:0 6px;border-radius:20px;flex:none;font-weight:500;line-height:1.7;white-space:nowrap}
 .sp-badge.exp{background:var(--danger-soft);color:var(--danger)}
+.sp-badge.dl{background:var(--danger-soft);color:var(--danger)}
 .sp-badge.pw{background:var(--accent-soft);color:var(--accent-text)}
 .sp-row .si-act{display:flex;gap:2px;flex:none}
 .sp-row .si-act button{width:28px;height:28px;border-radius:7px;border:none;background:transparent;color:var(--text2);cursor:pointer;display:grid;place-items:center;transition:.12s}
@@ -526,6 +538,18 @@ svg{display:block;flex:none}
 }
 .share-note{font-size:11.5px;color:var(--text3);line-height:1.55;margin:0 0 14px}
 .share-meta{color:var(--text2);font-size:12px}
+@media (max-width:520px){
+  /* 窄屏下把控件换到第二行，避免「有效期 + 数值 + 单位」挤成一团 */
+  .share-dialog .dbody{padding:16px 16px 4px}
+  .share-dialog .dfoot{padding:12px 16px 16px}
+  .optrow{flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .opt-ctl{width:100%;justify-content:flex-start}
+  .exp-custom{flex:1;min-width:0}
+  .exp-custom .num-mini{width:72px}
+  .dl-limit{width:100%}
+  .dl-limit .num-mini{width:96px}
+  .share-list{max-height:190px}
+}
 
 /* ---------------- 预览 ---------------- */
 #preview{
@@ -1330,12 +1354,32 @@ function renderShareCreate(it){
       '<input class="input" id="pwCustom" placeholder="4-16 位，字母或数字" maxlength="16" spellcheck="false" autocomplete="off">' +
     '</div>' +
     '<div class="optrow"><label>有效期</label>' +
-      '<select class="sel-mini" id="expSel">' +
-        '<option value="86400">1 天</option>' +
-        '<option value="604800" selected>7 天</option>' +
-        '<option value="2592000">30 天</option>' +
-        '<option value="0">永久有效</option>' +
-      '</select>' +
+      '<div class="opt-ctl">' +
+        '<select class="sel-mini" id="expSel">' +
+          '<option value="3600">1 小时</option>' +
+          '<option value="86400">1 天</option>' +
+          '<option value="604800" selected>7 天</option>' +
+          '<option value="2592000">30 天</option>' +
+          '<option value="-1">自定义</option>' +
+          '<option value="0">永久有效</option>' +
+        '</select>' +
+        '<span class="exp-custom" id="expCustom" style="display:none">' +
+          '<input class="num-mini" id="expNum" type="number" min="1" max="3650" value="7" inputmode="numeric" aria-label="自定义有效期数值">' +
+          '<select class="sel-mini" id="expUnit" aria-label="有效期单位">' +
+            '<option value="60">分钟</option>' +
+            '<option value="3600">小时</option>' +
+            '<option value="86400" selected>天</option>' +
+            '<option value="2592000">月</option>' +
+            '<option value="31536000">年</option>' +
+          '</select>' +
+        '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="optrow"><label>下载次数</label>' +
+      '<div class="dl-limit" title="留空表示不限制下载次数">' +
+        '<input class="num-mini" id="dlLimit" type="number" min="1" max="100000" placeholder="不限" inputmode="numeric" aria-label="允许下载次数">' +
+        '<span class="unit">次</span>' +
+      '</div>' +
     '</div>' +
     '<p class="share-note" id="shareNote" style="margin:2px 0 16px"></p>' +
     '<div class="share-list" id="shareList"><h3>已有分享</h3><div class="share-empty">加载中…</div></div>';
@@ -1368,6 +1412,16 @@ function renderShareCreate(it){
   });
   syncNote();
 
+  var expSel = shareOv.querySelector("#expSel");
+  expSel.onchange = function(){
+    var wrap = shareOv.querySelector("#expCustom");
+    if(wrap) wrap.style.display = expSel.value === "-1" ? "" : "none";
+    if(expSel.value === "-1"){
+      var n = shareOv.querySelector("#expNum");
+      if(n){ setTimeout(function(){ n.focus(); n.select(); }, 30); }
+    }
+  };
+
   shareOv.querySelector("#shareClose").onclick = closeShare;
   shareOv.querySelector("#shareCreate").onclick = function(){
     var password = "";
@@ -1376,13 +1430,35 @@ function renderShareCreate(it){
       password = (shareOv.querySelector("#pwCustom").value || "").trim();
       if(password.length < 4){ toast("提取码至少 4 位", "err"); return; }
     }
-    var expVal = Number(shareOv.querySelector("#expSel").value);
+    /* 有效期：选项直接给秒数，自定义按 数值 × 单位 计算，最多 10 年 */
+    var LIMIT_SEC = 3650 * 86400;
+    var expVal = Number(expSel.value);
+    if(expVal === -1){
+      var numInput = shareOv.querySelector("#expNum");
+      var n = parseInt((numInput && numInput.value) || "", 10);
+      if(!isFinite(n) || n < 1){ toast("自定义有效期请填 1 以上的整数", "err"); return; }
+      expVal = n * Number(shareOv.querySelector("#expUnit").value);
+      if(expVal > LIMIT_SEC) expVal = LIMIT_SEC;
+    }
+    /* 下载次数：留空 = 不限 */
+    var dlRaw = (shareOv.querySelector("#dlLimit").value || "").trim();
+    var maxDownloads = null;
+    if(dlRaw){
+      var dl = parseInt(dlRaw, 10);
+      if(!isFinite(dl) || dl < 1){ toast("下载次数请填 1 以上的整数，留空表示不限", "err"); return; }
+      maxDownloads = Math.min(dl, 1000000);
+    }
     var btn = shareOv.querySelector("#shareCreate");
     btn.disabled = true;
     btn.textContent = "创建中…";
     req("POST", "/__api/shares", {
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: it.path, password: password, expiresIn: expVal > 0 ? expVal : null })
+      body: JSON.stringify({
+        path: it.path,
+        password: password,
+        expiresIn: expVal > 0 ? expVal : null,
+        maxDownloads: maxDownloads
+      })
     }).then(function(r){
       return r.json().then(function(j){
         if(!r.ok) throw new Error(j.error || ("创建失败（" + r.status + "）"));
@@ -1404,6 +1480,7 @@ function renderShareResult(share, password){
   var body = shareOv.querySelector("#shareBody");
   var foot = shareOv.querySelector("#shareFoot");
   var expText = share.expiresAt ? fmtTimeFull(share.expiresAt) + " 失效" : "永久有效";
+  var dlText = share.maxDownloads ? "限 " + share.maxDownloads + " 次下载" : "下载次数不限";
 
   body.innerHTML =
     '<h2>分享</h2>' +
@@ -1417,7 +1494,7 @@ function renderShareResult(share, password){
         '<div class="linkrow" style="margin-bottom:9px"><label style="font-size:12.5px;color:var(--text2);align-self:center;flex:none;width:48px">提取码</label>' +
         '<div class="pwcode"><b id="sharePw">' + esc(password) + '</b><button id="copyPw">复制</button></div></div>'
         : '') +
-      '<p class="share-note share-meta" style="margin:10px 0 0">' + esc(share.name) + ' · ' + expText + (password ? ' · 需要提取码' : ' · 无需提取码') + '</p>' +
+      '<p class="share-note share-meta" style="margin:10px 0 0">' + esc(share.name) + ' · ' + expText + ' · ' + dlText + (password ? ' · 需要提取码' : ' · 无需提取码') + '</p>' +
     '</div>' +
     '<div class="share-list" id="shareList"></div>';
 
@@ -1452,7 +1529,10 @@ function loadShareList(){
     }
     var html = '<h3>已有分享 · ' + list.length + '</h3>';
     list.forEach(function(s){
-      var meta = (s.downloads || 0) + " 次下载 · " + (s.expiresAt ? fmtTimeFull(s.expiresAt) + " 失效" : "永久有效");
+      var used = s.downloads || 0;
+      var dlText = used + " 次下载" + (s.maxDownloads ? " / 限 " + s.maxDownloads + " 次" : "");
+      var dead = !!s.maxDownloads && used >= s.maxDownloads;
+      var meta = dlText + " · " + (s.expiresAt ? fmtTimeFull(s.expiresAt) + " 失效" : "永久有效") + (dead ? " · 已用完" : "");
       html += '<div class="share-item" data-id="' + esc(s.id) + '">' +
         '<div class="si-ic">' + iconSvg(s.isDir ? "dir" : "bin", 14) + '</div>' +
         '<div class="si-n"><b title="' + esc(s.name) + '"><i class="si-name">' + esc(s.name) + '</i>' + (s.needsPassword ? '<span class="si-lock">' + iconSvg("lock", 11) + '</span>' : '') + '</b>' +
@@ -1564,9 +1644,11 @@ function renderShares(){
   var html = "";
   all.forEach(function(s){
     var expired = isShareExpired(s);
+    var used = s.downloads || 0;
+    var dead = !!s.maxDownloads && used >= s.maxDownloads;
     var bits = [
       s.isDir ? "文件夹" : fmtSize(s.size),
-      (s.downloads || 0) + " 次下载",
+      used + " 次下载" + (s.maxDownloads ? " · 限 " + s.maxDownloads + " 次" : ""),
       fmtTime(s.createdAt) + "创建",
       s.expiresAt ? fmtShort(s.expiresAt) + " 到期" : "永久有效"
     ];
@@ -1577,6 +1659,7 @@ function renderShares(){
       '<div class="si-ic">' + iconSvg(kindOf(s.name, s.isDir), 15) + '</div>' +
       '<div class="si-n"><b><i class="si-name" title="' + esc(s.path) + '">' + esc(s.name) + '</i>' +
         (s.needsPassword ? '<span class="sp-badge pw">提取码</span>' : '') +
+        (dead ? '<span class="sp-badge dl">次数用完</span>' : '') +
         (expired ? '<span class="sp-badge exp">已过期</span>' : '') +
       '</b><span class="si-meta">' + meta + '</span></div>' +
       '<div class="si-act">' +

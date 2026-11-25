@@ -3,10 +3,11 @@ import { listMembers, statPath } from "./resources";
 import { keyOf } from "./utils";
 import { renderShareError, renderSharePage } from "./share-page";
 import {
-  bumpShareHit,
+  claimShareDownload,
   createShareRecord,
   getShareRecord,
   hashPassword,
+  isDownloadExhausted,
   isExpired,
   listShareRecords,
   newShareId,
@@ -15,6 +16,7 @@ import {
   shareName,
   signAccessToken,
   toView,
+  touchShareAccess,
   verifyAccessToken,
   type ShareRecord,
   type ShareView,
@@ -50,6 +52,18 @@ function html(status: number, body: string): Response {
   });
 }
 
+/** 下载额度用尽：浏览器直接打开链接时给 HTML 提示页，脚本调用给 JSON */
+function exhaustedResponse(request: Request): Response {
+  const accept = request.headers.get("Accept") ?? "";
+  if (accept.includes("text/html")) {
+    return html(
+      410,
+      renderShareError("下载次数已用完", "分享者设置的可下载次数已经用完，请联系分享者重新分享。"),
+    );
+  }
+  return json(410, { error: "下载次数已用完" });
+}
+
 /** 命中公开分享路径时返回 true，调用方据此在鉴权前分流 */
 export function isSharePath(pathname: string): boolean {
   return pathname === "/s" || pathname.startsWith("/s/") || pathname.startsWith("/__s/");
@@ -74,6 +88,12 @@ export async function handleShareRoute(request: Request, env: Env, url: URL): Pr
     }
     if (isExpired(rec)) {
       return html(410, renderShareError("分享已过期", "这个分享已超过有效期，请联系分享者重新分享。"));
+    }
+    if (isDownloadExhausted(rec)) {
+      return html(
+        410,
+        renderShareError("下载次数已用完", "分享者设置的可下载次数已经用完，请联系分享者重新分享。"),
+      );
     }
     if (method === "HEAD") {
       return new Response(null, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } });
@@ -147,13 +167,25 @@ export async function handleShareRoute(request: Request, env: Env, url: URL): Pr
     const sub = url.searchParams.get("p") ?? "";
     const target = resolveSub(rec.path, sub);
     if (target === null) return json(400, { error: "路径非法" });
+    const inline = url.searchParams.get("inline") === "1";
+    /* 预览（inline）与 HEAD 不消耗下载次数，只有真正下载才计数 */
+    const counts = !inline && method === "GET";
+    if (isDownloadExhausted(rec)) return exhaustedResponse(request);
+    if (counts) {
+      const claim = await claimShareDownload(env, rec.id);
+      if (!claim.ok) {
+        if (claim.reason === "expired") {
+          return html(410, renderShareError("分享已过期", "这个分享已超过有效期，请联系分享者重新分享。"));
+        }
+        return exhaustedResponse(request);
+      }
+    } else {
+      await touchShareAccess(env, rec.id);
+    }
     const stat = await statPath(env, target);
     if (!stat) return json(404, { error: "文件不存在或已被删除" });
     if (stat.isDir) return json(400, { error: "这是文件夹，请使用页面浏览" });
-    const inline = url.searchParams.get("inline") === "1";
-    const res = await streamFile(env, target, stat, request, method === "HEAD", inline);
-    if (res.status === 200 || res.status === 206) await bumpShareHit(env, rec.id);
-    return res;
+    return streamFile(env, target, stat, request, method === "HEAD", inline);
   }
 
   return json(404, { error: "not found" });
@@ -263,7 +295,12 @@ export async function handleShareApi(
 
   // POST /__api/shares  创建
   if (!rest && method === "POST") {
-    let body: { path?: string; password?: string; expiresIn?: number | null } = {};
+    let body: {
+      path?: string;
+      password?: string;
+      expiresIn?: number | null;
+      maxDownloads?: number | null;
+    } = {};
     try {
       body = (await request.json()) as typeof body;
     } catch {
@@ -281,7 +318,15 @@ export async function handleShareApi(
     const ttl = body.expiresIn;
     let expiresAt: number | null = null;
     if (typeof ttl === "number" && Number.isFinite(ttl) && ttl > 0) {
-      expiresAt = Date.now() + Math.min(ttl, 365 * 24 * 3600) * 1000;
+      // 上限 10 年，防止误填天文数字把 Date 溢出成 Invalid Date
+      expiresAt = Date.now() + Math.min(Math.floor(ttl), 3650 * 24 * 3600) * 1000;
+    }
+
+    /* 下载次数上限：留空 / 0 / 负数 = 不限；上限 100 万次 */
+    const rawMax = body.maxDownloads;
+    let maxDownloads: number | null = null;
+    if (typeof rawMax === "number" && Number.isFinite(rawMax) && rawMax >= 1) {
+      maxDownloads = Math.min(Math.floor(rawMax), 1_000_000);
     }
 
     const rec: ShareRecord = {
@@ -296,6 +341,7 @@ export async function handleShareApi(
       passwordHash: needsPassword ? await hashPassword(id, rawPassword) : null,
       needsPassword,
       downloads: 0,
+      maxDownloads,
       lastAccess: null,
     };
     await createShareRecord(env, rec);
