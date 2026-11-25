@@ -36,6 +36,7 @@ export function renderUi(initAuth = "", defaultUser = "admin"): string {
   --border:#e6e8ec; --border2:#eef0f3; --hover:#f4f5f8; --active:#eceefb;
   --accent:#4f46e5; --accent2:#6366f1; --accent-soft:#eef2ff; --accent-text:#4338ca;
   --brand:#4f46e5; --brand-weak:#eef2ff;
+  --quota-warn:#b45309; --quota-full:#e5484d;
   --danger:#e5484d; --danger-soft:#fef1f1; --ok:#12a594;
   --shadow-sm:0 1px 2px rgba(16,24,40,.05);
   --shadow:0 2px 4px rgba(16,24,40,.04),0 12px 32px -8px rgba(16,24,40,.12);
@@ -48,6 +49,7 @@ html[data-theme="dark"]{
   --border:#242932; --border2:#1d222a; --hover:#1b2028; --active:#232a3b;
   --accent:#818cf8; --accent2:#6366f1; --accent-soft:#1e1f3a; --accent-text:#a5b4fc;
   --brand:#818cf8; --brand-weak:#1e1f3a;
+  --quota-warn:#fbbf24; --quota-full:#ff7b7b;
   --danger:#f87171; --danger-soft:#2a1618; --ok:#2dd4bf;
   --shadow-sm:0 1px 2px rgba(0,0,0,.4);
   --shadow:0 2px 4px rgba(0,0,0,.3),0 12px 32px -8px rgba(0,0,0,.5);
@@ -59,6 +61,7 @@ html[data-theme="dark"]{
     --border:#242932; --border2:#1d222a; --hover:#1b2028; --active:#232a3b;
     --accent:#818cf8; --accent2:#6366f1; --accent-soft:#1e1f3a; --accent-text:#a5b4fc;
     --brand:#818cf8; --brand-weak:#1e1f3a;
+  --quota-warn:#fbbf24; --quota-full:#ff7b7b;
     --danger:#f87171; --danger-soft:#2a1618; --ok:#2dd4bf;
     --shadow-sm:0 1px 2px rgba(0,0,0,.4);
     --shadow:0 2px 4px rgba(0,0,0,.3),0 12px 32px -8px rgba(0,0,0,.5);
@@ -198,6 +201,31 @@ svg{display:block;flex:none}
   background:var(--accent-soft);color:var(--accent-text);font-size:12.5px;font-weight:650;
   border:1px solid color-mix(in srgb,var(--accent) 20%,transparent);
 }
+
+/* ---------------- 容量 ---------------- */
+/* 进度条按 9.9 GB 归一，走满就是「写不进去了」，不会让人以为还有余量 */
+.quota{
+  flex:none;width:126px;height:34px;padding:0 10px;border-radius:8px;
+  display:flex;flex-direction:column;justify-content:center;gap:3px;
+  background:var(--bg);border:1px solid transparent;transition:.13s;cursor:pointer;
+}
+.quota:hover{background:var(--hover);border-color:var(--border)}
+.q-line{
+  display:flex;align-items:baseline;gap:4px;font-size:11px;color:var(--text2);
+  line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;
+}
+.q-line b{color:var(--text);font-weight:600;font-size:11.5px}
+.q-line em{font-style:normal;color:var(--text3)}
+.q-bar{height:3px;border-radius:3px;background:var(--border2);overflow:hidden;flex:none}
+.q-bar i{
+  display:block;height:100%;width:0;border-radius:3px;background:var(--accent);
+  transition:width .4s cubic-bezier(.4,0,.2,1),background .3s;
+}
+.quota.warn .q-bar i{background:var(--quota-warn)}
+.quota.full .q-bar i{background:var(--quota-full)}
+.quota.warn .q-line b{color:var(--quota-warn)}
+.quota.full .q-line b{color:var(--quota-full)}
+.q-s{display:none}
 
 /* ---------------- 面包屑 + 工具条 ---------------- */
 .crumbbar{
@@ -623,6 +651,12 @@ svg{display:block;flex:none}
 /* 移动端 */
 @media (max-width:720px){
   .brand-name,.vsep,#btnRefresh,#btnTheme,.crumb-ghost{display:none}
+  /* 手机顶栏挤，容量块缩成短格式，只留「1.2G / 10G」加一条进度线 */
+  .quota{width:68px;padding:0 7px;gap:2px}
+  .quota .q-l{display:none}
+  .quota .q-s{display:inline;font-size:10px;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--text2);white-space:nowrap}
+  .quota.warn .q-s{color:var(--quota-warn)}
+  .quota.full .q-s{color:var(--quota-full)}
   .brand{padding-right:0}
   .topbar{gap:6px;padding:0 10px}
   .search{margin-left:0;max-width:none}
@@ -710,6 +744,14 @@ svg{display:block;flex:none}
       <button class="clr hidden" id="qClr" title="清除">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
+    </div>
+
+    <div class="quota" id="quota" title="云盘容量">
+      <div class="q-line">
+        <span class="q-l"><b id="qUsed">—</b><span class="q-sep">&nbsp;/&nbsp;</span><em id="qTotal">10 GB</em></span>
+        <span class="q-s" id="qShort">—</span>
+      </div>
+      <div class="q-bar"><i id="qFill"></i></div>
     </div>
 
     <div class="topbar-actions">
@@ -930,7 +972,12 @@ function segEnc(s){ return encodeURIComponent(s); }
 /** 内部路径 -> 编码后的 URL 路径（与 Worker 的 encodePath 一致） */
 function urlPath(p){
   if(p === "/") return "/";
-  return p.split("/").map(function(x, i){ return i === 0 ? "" : encodeURIComponent(x); }).join("/");
+  /* 查询串要原样保留：逐段 encodeURIComponent 会把 ? 和 = 也编掉，
+     服务端收到 /__api/quota%3Ffresh%3D1 就 404 了 */
+  var qs = "";
+  var qi = p.indexOf("?");
+  if(qi >= 0){ qs = p.slice(qi); p = p.slice(0, qi); }
+  return p.split("/").map(function(x, i){ return i === 0 ? "" : encodeURIComponent(x); }).join("/") + qs;
 }
 function joinPath(dir, name){ return dir === "/" ? "/" + name : dir + "/" + name; }
 function parentOf(p){
@@ -1012,7 +1059,7 @@ var statFresh = false;
 function req(method, path, opts){
   opts = opts || {};
   var m = String(method || "").toUpperCase();
-  if(m === "PUT" || m === "DELETE" || m === "MKCOL" || m === "MOVE" || m === "COPY") statFresh = true;
+  if(m === "PUT" || m === "DELETE" || m === "MKCOL" || m === "MOVE" || m === "COPY"){ statFresh = true; quotaDirty = true; }
   var headers = authHeaders(opts.headers);
   if(opts.body !== undefined && opts.body !== null && !(opts.body instanceof Blob) && !(opts.body instanceof File)){
     if(!headers.has("Content-Type")) headers.set("Content-Type", "application/xml; charset=utf-8");
@@ -1912,6 +1959,7 @@ async function load(){
     render();
     loadDirStats(statFresh);
     statFresh = false;
+    if(quotaDirty){ quotaDirty = false; loadQuota(true); }
   } catch(e){
     S.loading = false;
     render();
@@ -2197,6 +2245,72 @@ async function editExisting(it){
   } catch(e){ toast("读取失败：" + e.message, "err"); }
 }
 
+/* ================= 容量 =================
+   总额度 10 GB，真正能写到的上限是 9.9 GB（服务端硬限制）。
+   进度条按 9.9 GB 归一：走满就是「存不进去了」，不会让人以为还剩 10%。 */
+var QP = null, quotaSeq = 0, quotaDirty = false;
+
+/** 顶栏用的短格式：1.2G / 512M
+    注意：这里是模板字符串内部，正则里的 \. 会被 TS 吃掉变成 . ，
+    会导致 "10.0" 被 .0$ 误伤成 "1"，所以这里只用字符串判断，不用正则。 */
+function fmtSizeShort(n){
+  if(n == null || isNaN(n)) return "—";
+  if(n >= 1073741824){
+    var g = n / 1073741824;
+    var s = g >= 10 ? String(Math.round(g)) : g.toFixed(1);
+    if(s.length > 2 && s.slice(-2) === ".0") s = s.slice(0, -2);
+    return s + "G";
+  }
+  if(n >= 1048576) return Math.round(n / 1048576) + "M";
+  if(n >= 1024) return Math.round(n / 1024) + "K";
+  return Math.round(n) + "B";
+}
+
+function loadQuota(fresh, cb){
+  if(!S.auth){ if(cb) cb(QP); return; }
+  var seq = ++quotaSeq;
+  req("GET", "/__api/quota" + (fresh ? "?fresh=1" : "")).then(function(r){
+    if(r.status === 401){ logout("登录已失效，请重新登录"); return null; }
+    if(!r.ok) return null;
+    return r.json();
+  }).then(function(j){
+    if(seq === quotaSeq && j) applyQuota(j);
+    if(cb) cb(j || QP);
+  }).catch(function(){ if(cb) cb(QP); });
+}
+
+function applyQuota(u){
+  QP = u;
+  var el = $("quota");
+  if(!el) return;
+  var used = $("qUsed"), tot = $("qTotal"), sh = $("qShort"), fill = $("qFill");
+  if(used) used.textContent = fmtSize(u.used);
+  if(tot) tot.textContent = fmtSize(u.total);
+  if(sh) sh.textContent = fmtSizeShort(u.used) + " / " + fmtSizeShort(u.total);
+  var pct = u.limit ? Math.min(100, (u.used / u.limit) * 100) : 0;
+  /* 有数据时至少留 0.6%，否则一颗灰尘大小的文件看起来像没画 */
+  if(fill){
+    fill.style.width = (u.used > 0 && pct < 0.6 ? 0.6 : pct) + "%";
+    /* 用量很小时按比例只有一两像素，给个下限，否则看起来像没画 */
+    fill.style.minWidth = u.used > 0 ? "2px" : "0";
+  }
+  el.classList.toggle("warn", !!u.nearLimit && !u.full);
+  el.classList.toggle("full", !!u.full);
+  var pctOfTotal = u.total ? (u.used / u.total) * 100 : 0;
+  /* 注意：这里是模板字符串内部，不能用 \n —— 会被 TS 提前解析成真实换行，生成的 JS 直接语法错误 */
+  el.setAttribute("title",
+    "已用 " + fmtSize(u.used) + " / " + fmtSize(u.total) + "（" + pctOfTotal.toFixed(1) + "%）" +
+    " · 剩余 " + fmtSize(Math.max(0, u.total - u.used)) +
+    " · 写入上限 " + fmtSize(u.limit) +
+    " · " + u.files + " 个文件 / " + u.dirs + " 个文件夹");
+}
+
+function quotaTip(){
+  if(!QP){ loadQuota(true); return; }
+  var full = Math.max(0, QP.total - QP.used);
+  toast("已用 " + fmtSize(QP.used) + " / " + fmtSize(QP.total) + " · 剩余 " + fmtSize(full), QP.full ? "err" : "ok");
+}
+
 /* ================= 上传 ================= */
 var Q = [], Qactive = 0, Qtimer = null;
 
@@ -2211,17 +2325,35 @@ function fmtRate(bps){
 function enqueue(fileList){
   var files = Array.prototype.slice.call(fileList || []);
   if(!files.length) return;
-  files.forEach(function(f){
-    Q.push({
-      file: f, path: joinPath(S.path, f.name),
-      prog: 0, status: "wait", err: "",
-      loaded: 0, speed: 0, lastT: 0, lastLoaded: 0, lastEvt: 0
+
+  var need = 0;
+  files.forEach(function(f){ need += f.size; });
+
+  function start(){
+    /* 已知配额时先挡一道，省得传到一半才被服务端 507 打断 */
+    if(QP){
+      var free = Math.max(0, QP.limit - QP.used);
+      if(need > free){
+        toast("空间不足：这批共 " + fmtSize(need) + "，只剩 " + fmtSize(free), "err");
+        loadQuota(true);
+        return;
+      }
+    }
+    files.forEach(function(f){
+      Q.push({
+        file: f, path: joinPath(S.path, f.name),
+        prog: 0, status: "wait", err: "",
+        loaded: 0, speed: 0, lastT: 0, lastLoaded: 0, lastEvt: 0
+      });
     });
-  });
-  $("uploads").classList.remove("hidden");
-  renderUploads();
-  startTicker();
-  pump();
+    $("uploads").classList.remove("hidden");
+    renderUploads();
+    startTicker();
+    pump();
+  }
+
+  /* 还没取到配额：先拉一次再决定，避免「不知道还能不能放」 */
+  if(!QP) loadQuota(true, start); else start();
 }
 
 /* 卡住时不会再收到 progress，速度得掉回 0，否则会一直停在最后一个读数上 */
@@ -2251,6 +2383,7 @@ function pump(){
     var errN = Q.filter(function(t){ return t.status === "error"; }).length;
     if(okN) toast("已上传 " + okN + " 个文件" + (errN ? "，" + errN + " 个失败" : ""), errN ? "err" : "ok");
     if(okN) statFresh = true; // 上传绕过了 req()，这里补上统计失效标记
+    if(okN) quotaDirty = true;
     load();
     var snapshot = Q.length;
     setTimeout(function(){
@@ -2288,6 +2421,13 @@ function startUpload(task){
     Qactive--;
     if(xhr.status === 401){ task.status = "error"; task.err = "登录失效"; }
     else if(xhr.status === 423){ task.status = "error"; task.err = "已锁定"; }
+    else if(xhr.status === 507){
+      task.status = "error";
+      task.err = "空间不足";
+      /* 服务端已经按 9.9 GB 拦下了，这里把配额拉新，顶栏数字跟着变红 */
+      quotaDirty = true;
+      loadQuota(true);
+    }
     else if(xhr.status === 201 || xhr.status === 204 || xhr.status === 200){
       task.status = "done"; task.prog = 1; task.loaded = task.file.size;
     }
@@ -2424,6 +2564,9 @@ function showApp(){
   $("btnUser").textContent = initial;
   $("btnUser").title = S.user + " · 点击退出";
   navigate("/", false);
+  /* 进来先取一次容量，顶栏不会空着 */
+  QP = null;
+  loadQuota(true);
 }
 function logout(msg){
   try {
@@ -2469,6 +2612,7 @@ async function doLogin(user, pass, remember){
 /* ================= 事件绑定 ================= */
 function bindGlobal(){
   bindShares();
+  if($("quota")) $("quota").addEventListener("click", quotaTip);
   $("loginForm").addEventListener("submit", function(e){
     e.preventDefault();
     var u = $("u").value.trim();

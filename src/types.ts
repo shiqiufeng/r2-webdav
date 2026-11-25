@@ -6,6 +6,10 @@ export interface Env {
   WEBDAV_PASS?: string;
   LOCK_TIMEOUT?: string;
   READ_ONLY?: string;
+  /** 总额度（GB），默认 10 */
+  QUOTA_TOTAL_GB?: string;
+  /** 可用比例（0-1），默认 0.99，即 10 GB 的额度最多写 9.9 GB */
+  QUOTA_USABLE_PCT?: string;
 }
 
 export type LockScope = "exclusive" | "shared";

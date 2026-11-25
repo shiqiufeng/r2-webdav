@@ -44,7 +44,8 @@ import {
 import { escapeXml, findChild, parseXml, serializeXml, type XmlNode } from "./xml";
 import { renderUi } from "./ui";
 import { handleShareApi, handleShareRoute, isSharePath } from "./share-api";
-import { clearDirStatCache, handleDirStatApi } from "./dirstat";
+import { clearDirStatCache, handleDirStatApi, statDirTree } from "./dirstat";
+import { checkSpace, handleQuotaApi, insufficientStorage, invalidateUsage } from "./quota";
 
 export { LockDO } from "./lock";
 export { ShareDO } from "./share";
@@ -106,6 +107,10 @@ async function route(request: Request, env: Env): Promise<Response> {
   /* 目录统计：文件夹的递归大小与条目数，同样需要 Basic 认证 */
   const dirStat = await handleDirStatApi(request, env, url);
   if (dirStat) return dirStat;
+
+  /* 容量配额：已用 / 10 GB，硬上限 9.9 GB */
+  const quota = await handleQuotaApi(request, env, url);
+  if (quota) return quota;
 
   const path = normalizePath(url.pathname);
 
@@ -489,6 +494,19 @@ async function handlePut(request: Request, env: Env, path: string): Promise<Resp
   const lock = await checkLocks(env, path, ifTokens(request), false);
   if (!lock.ok && lock.conflict) return lockedResponse(lock.conflict);
 
+  /* ---------- 容量检查 ----------
+     覆盖已有文件时只算增量；Content-Length 缺失（chunked）就写完再核一次。 */
+  const existingSize = existing?.size ?? 0;
+  const rawLen = request.headers.get("Content-Length");
+  const declaredLen = rawLen === null || rawLen === "" ? NaN : Number(rawLen);
+  let verifyAfterWrite = false;
+  if (Number.isFinite(declaredLen) && declaredLen >= 0) {
+    const space = await checkSpace(env, declaredLen - existingSize);
+    if (!space.ok) return insufficientStorage(space);
+  } else {
+    verifyAfterWrite = true;
+  }
+
   /* 客户端没给有效 Content-Type 时按扩展名推断 —— 否则图片/视频会存成
      application/octet-stream，分享页与浏览器都无法内联预览。 */
   const declared = (request.headers.get("Content-Type") ?? "").trim();
@@ -502,6 +520,23 @@ async function handlePut(request: Request, env: Env, path: string): Promise<Resp
 
   const put = await env.BUCKET.put(key, request.body, { httpMetadata });
   clearDirStatCache(); // 父目录的大小/条目数变了
+  invalidateUsage();
+
+  /* 没有 Content-Length 时无法事前判断，只能写完后核一遍；超了就回滚 */
+  if (verifyAfterWrite) {
+    const space = await checkSpace(env, 0, true);
+    if (space.usage.used > space.usage.limit) {
+      await env.BUCKET.delete(key);
+      clearDirStatCache();
+      invalidateUsage();
+      return insufficientStorage({
+        ok: false,
+        usage: space.usage,
+        after: space.usage.used,
+        lacking: space.usage.used - space.usage.limit,
+      });
+    }
+  }
 
   return new Response(null, {
     status: existing ? 204 : 201,
@@ -538,6 +573,7 @@ async function handleDelete(request: Request, env: Env, path: string): Promise<R
   await removeTree(env, path);
   await releaseLocksUnder(env, path);
   clearDirStatCache();
+  invalidateUsage();
   return emptyResponse(204);
 }
 
@@ -563,6 +599,7 @@ async function handleMkcol(request: Request, env: Env, path: string): Promise<Re
 
   await createDirectoryMarker(env, path);
   clearDirStatCache();
+  invalidateUsage();
   return emptyResponse(201);
 }
 
@@ -613,11 +650,20 @@ async function handleCopyMove(
   const dstLock = await checkLocks(env, dstPath, tokens, !!dst);
   if (!dstLock.ok && dstLock.conflict) return lockedResponse(dstLock.conflict);
 
+  /* COPY 会让桶里多一份数据，需要配额；MOVE 只是改 key，总量不变 */
+  if (!isMove) {
+    const incoming = src.isDir ? (await statDirTree(env, srcPath)).size : src.size;
+    const replaced = dst ? (dst.isDir ? (await statDirTree(env, dstPath)).size : dst.size) : 0;
+    const space = await checkSpace(env, incoming - replaced);
+    if (!space.ok) return insufficientStorage(space);
+  }
+
   if (dst) await removeTree(env, dstPath);
 
   const ok = await copyTree(env, srcPath, dstPath);
   if (!ok) return textResponse(500, "Copy failed");
   clearDirStatCache();
+  invalidateUsage();
 
   if (isMove) {
     await removeTree(env, srcPath);
