@@ -182,14 +182,25 @@ type DoRequest =
   /** 计一次下载（先判上限再自增，DO 单线程保证不超卖） */
   | { op: "claim"; id: string }
   /** 只更新访问时间，不计数（预览、HEAD 用） */
-  | { op: "touch"; id: string };
+  | { op: "touch"; id: string }
+  /** 读取「面板改过的密码」哈希；没改过返回 null，回落到 env.WEBDAV_PASS */
+  | { op: "authGet" }
+  /** 覆盖密码哈希（只存哈希，明文不落库） */
+  | { op: "authSet"; hash: string };
 
 interface DoResponse {
   ok: boolean;
   record?: ShareRecord | null;
   records?: ShareRecord[];
   error?: string;
+  hash?: string | null;
 }
+
+/**
+ * 改过的密码存这个 key。
+ * 分享记录统一带 "s:" 前缀，所以这里用 "auth:" 不会被 list 扫出来。
+ */
+const AUTH_KEY = "auth:pw";
 
 export class ShareDO implements DurableObject {
   constructor(private readonly state: DurableObjectState) {}
@@ -215,6 +226,10 @@ export class ShareDO implements DurableObject {
           return this.json(await this.claim(req.id));
         case "touch":
           return this.json(await this.touch(req.id));
+        case "authGet":
+          return this.json(await this.authGet());
+        case "authSet":
+          return this.json(await this.authSet(req.hash));
         default:
           return this.json({ ok: false, error: "unknown op" });
       }
@@ -298,6 +313,16 @@ export class ShareDO implements DurableObject {
     await this.state.storage.put(KEY_PREFIX + id, rec);
     return { ok: true, record: rec };
   }
+
+  private async authGet(): Promise<DoResponse> {
+    const hash = (await this.state.storage.get<string>(AUTH_KEY)) ?? null;
+    return { ok: true, hash };
+  }
+
+  private async authSet(hash: string): Promise<DoResponse> {
+    await this.state.storage.put(AUTH_KEY, hash);
+    return { ok: true };
+  }
 }
 
 /* ================================================================== */
@@ -358,6 +383,20 @@ export async function claimShareDownload(env: Env, id: string): Promise<ClaimRes
 /** 仅记录访问时间（预览、HEAD 不消耗下载次数） */
 export async function touchShareAccess(env: Env, id: string): Promise<void> {
   await call(env, { op: "touch", id });
+}
+
+/* ------------------------------------------------------------------ */
+/* 面板改过的密码                                                      */
+/* ------------------------------------------------------------------ */
+
+export async function getStoredAuthHash(env: Env): Promise<string | null> {
+  const res = await call(env, { op: "authGet" });
+  return res.hash ?? null;
+}
+
+export async function setStoredAuthHash(env: Env, hash: string): Promise<void> {
+  const res = await call(env, { op: "authSet", hash });
+  if (!res.ok) throw new Error(res.error ?? "save password failed");
 }
 
 /* ================================================================== */

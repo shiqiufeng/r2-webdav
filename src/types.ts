@@ -10,6 +10,8 @@ export interface Env {
   QUOTA_TOTAL_GB?: string;
   /** 可用比例（0-1），默认 0.99，即 10 GB 的额度最多写 9.9 GB */
   QUOTA_USABLE_PCT?: string;
+  /** 设为 "1" 时忽略面板里改过的密码，用 WEBDAV_PASS 登录（忘记新密码时的兜底） */
+  AUTH_RESET?: string;
 }
 
 export type LockScope = "exclusive" | "shared";

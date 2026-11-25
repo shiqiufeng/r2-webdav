@@ -2,7 +2,6 @@ import type { DavRes, Env, LockRecord, PropName } from "./types";
 import {
   ALLOW_METHODS,
   DAV_HEADERS,
-  authenticate,
   baseName,
   checkReadPreconditions,
   checkWritePreconditions,
@@ -47,6 +46,9 @@ import { handleShareApi, handleShareRoute, isSharePath } from "./share-api";
 import { clearDirStatCache, handleDirStatApi, statDirTree } from "./dirstat";
 import { checkSpace, handleQuotaApi, insufficientStorage, invalidateUsage } from "./quota";
 import { handlePreviewApi, verifyPreviewToken } from "./preview";
+import { authenticateAsync } from "./auth";
+import { handleAccountApi } from "./account-api";
+import { handleDonateAsset } from "./qr";
 
 export { LockDO } from "./lock";
 export { ShareDO } from "./share";
@@ -76,6 +78,10 @@ async function route(request: Request, env: Env): Promise<Response> {
      用短期 HMAC 令牌代替凭据。必须先于 Basic 认证，否则播放器拿到 401 就废了。 */
   if (url.pathname.startsWith("/__p/")) return handleSignedPreview(request, env, url);
 
+  /* 打赏二维码：几十 KB 的图片，公开可读（<img> 带不上 Basic 头），长缓存 */
+  const donate = handleDonateAsset(url, method);
+  if (donate) return donate;
+
   /* 外链分享：/s/:id 页面与 /__s/:id/* 数据接口。权限完全由分享记录 + 提取码令牌决定，
      必须先于 Basic 认证处理，否则没凭据的访客会被 401 拦住。 */
   if (isSharePath(url.pathname)) return handleShareRoute(request, env, url);
@@ -85,7 +91,7 @@ async function route(request: Request, env: Env): Promise<Response> {
      真正的文件读写仍由前端逐次携带 Basic 凭据完成。 */
   if (isUiRequest(url, request, method)) return serveUi(request, env, method);
 
-  const auth = authenticate(request, env);
+  const auth = await authenticateAsync(request, env);
   if (auth === "unconfigured") {
     return textResponse(
       500,
@@ -116,6 +122,10 @@ async function route(request: Request, env: Env): Promise<Response> {
   /* 容量配额：已用 / 10 GB，硬上限 9.9 GB */
   const quota = await handleQuotaApi(request, env, url);
   if (quota) return quota;
+
+  /* 账号信息与修改密码（必须带原密码） */
+  const account = await handleAccountApi(request, env, url);
+  if (account) return account;
 
   /* 预览直链签发：用 Basic 凭据换一个短期签名地址 */
   const previewApi = await handlePreviewApi(request, env, url);
@@ -161,9 +171,9 @@ function isUiRequest(url: URL, request: Request, method: string): boolean {
   return (request.headers.get("Accept") ?? "").includes("text/html");
 }
 
-function serveUi(request: Request, env: Env, method: string): Response {
+async function serveUi(request: Request, env: Env, method: string): Promise<Response> {
   let initAuth = "";
-  if (authenticate(request, env) === "ok") {
+  if ((await authenticateAsync(request, env)) === "ok") {
     const m = /^Basic\s+([A-Za-z0-9+/=]+)$/i.exec((request.headers.get("Authorization") ?? "").trim());
     if (m) initAuth = m[1];
   }

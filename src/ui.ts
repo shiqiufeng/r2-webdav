@@ -9,6 +9,16 @@
  *           页面可免登录直接进入（绝不注入未通过校验的凭据）。
  * defaultUser: 服务端 WEBDAV_USER 的当前值，用于预填登录框；前端不再硬编码用户名。
  */
+import {
+  APP_NAME,
+  APP_TAGLINE,
+  APP_VERSION,
+  AUTHOR,
+  AUTHOR_DESC,
+  DONATE_LINES,
+  LICENSE_NAME,
+  REPO_URL,
+} from "./meta";
 /** 服务端侧属性转义：仅用于把 env 值安全注入 HTML 属性 */
 function attrEsc(input: string): string {
   return input.replace(/[&<>"']/g, (c) =>
@@ -202,30 +212,183 @@ svg{display:block;flex:none}
   border:1px solid color-mix(in srgb,var(--accent) 20%,transparent);
 }
 
-/* ---------------- 容量 ---------------- */
+/* ---------------- 容量（顶栏左侧，常驻） ---------------- */
 /* 进度条按 9.9 GB 归一，走满就是「写不进去了」，不会让人以为还有余量 */
 .quota{
-  flex:none;width:126px;height:34px;padding:0 10px;border-radius:8px;
-  display:flex;flex-direction:column;justify-content:center;gap:3px;
-  background:var(--bg);border:1px solid transparent;transition:.13s;cursor:pointer;
+  flex:none;width:198px;height:40px;padding:6px 11px 7px;border-radius:10px;
+  display:flex;flex-direction:column;justify-content:center;gap:5px;
+  background:var(--bg);border:1px solid var(--border2);transition:.13s;cursor:pointer;
 }
 .quota:hover{background:var(--hover);border-color:var(--border)}
 .q-line{
-  display:flex;align-items:baseline;gap:4px;font-size:11px;color:var(--text2);
-  line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;
+  display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text2);
+  line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;
 }
-.q-line b{color:var(--text);font-weight:600;font-size:11.5px}
+.q-line .q-ico{color:var(--accent);opacity:.9}
+.q-line b{color:var(--text);font-weight:650;font-size:12px}
 .q-line em{font-style:normal;color:var(--text3)}
-.q-bar{height:3px;border-radius:3px;background:var(--border2);overflow:hidden;flex:none}
+.q-pct{margin-left:auto;font-size:10.5px;color:var(--text3);flex:none}
+.q-bar{height:4px;border-radius:4px;background:var(--border2);overflow:hidden;flex:none}
 .q-bar i{
-  display:block;height:100%;width:0;border-radius:3px;background:var(--accent);
+  display:block;height:100%;width:0;border-radius:4px;background:var(--accent);
   transition:width .4s cubic-bezier(.4,0,.2,1),background .3s;
 }
 .quota.warn .q-bar i{background:var(--quota-warn)}
 .quota.full .q-bar i{background:var(--quota-full)}
 .quota.warn .q-line b{color:var(--quota-warn)}
 .quota.full .q-line b{color:var(--quota-full)}
-.q-s{display:none}
+.quota.warn .q-pct{color:var(--quota-warn)}
+.quota.full .q-pct{color:var(--quota-full)}
+
+/* ---------------- 账号菜单 ---------------- */
+#userMenu{
+  position:fixed;top:calc(var(--topbar) + 6px);right:12px;width:252px;z-index:66;
+  background:var(--panel);border:1px solid var(--border);border-radius:14px;
+  box-shadow:var(--shadow-lg);padding:6px;animation:pop .12s cubic-bezier(.2,.8,.3,1);
+}
+.um-head{display:flex;align-items:center;gap:10px;padding:10px 10px 11px}
+.um-ava{
+  width:38px;height:38px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent-text);font-size:14px;font-weight:650;
+  border:1px solid color-mix(in srgb,var(--accent) 20%,transparent);
+}
+.um-id{min-width:0}
+.um-id b{display:block;font-size:13.5px;font-weight:640;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.um-id span{display:block;font-size:11.5px;color:var(--text3);margin-top:1px}
+.um-quota{padding:0 10px 10px}
+.um-quota .um-qt{display:flex;align-items:baseline;gap:4px;font-size:11px;color:var(--text3);font-variant-numeric:tabular-nums}
+.um-quota .um-qt b{color:var(--text2);font-weight:600}
+.um-quota .um-qt em{font-style:normal;margin-left:auto}
+.um-bar{height:4px;border-radius:4px;background:var(--border2);overflow:hidden;margin-top:6px}
+.um-bar i{display:block;height:100%;width:0;border-radius:4px;background:var(--accent);transition:width .35s}
+.um-sep{height:1px;background:var(--border2);margin:5px 6px}
+.um-item{
+  display:flex;align-items:center;gap:9px;width:100%;padding:9px 10px;border-radius:8px;
+  font-size:13px;color:var(--text);text-align:left;transition:background .1s;
+}
+.um-item:hover{background:var(--hover)}
+.um-item svg{color:var(--text3)}
+.um-item:hover svg{color:var(--text2)}
+.um-item .um-k{margin-left:auto;font-size:10.5px;color:var(--text3)}
+.um-item.danger{color:var(--danger)}
+.um-item.danger svg{color:var(--danger)}
+.um-item.danger:hover{background:var(--danger-soft)}
+
+/* ---------------- 个人信息 ---------------- */
+.pf-dialog{
+  max-width:436px;max-height:min(90vh,760px);display:flex;flex-direction:column;
+}
+.pf-dialog .dbody{padding:22px 22px 4px;overflow-y:auto;flex:1;min-height:0;overscroll-behavior:contain}
+.pf-dialog .dfoot{flex:none;border-top:1px solid var(--border2);padding-top:14px}
+.pf-top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.pf-ava{
+  width:50px;height:50px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;
+  font-size:19px;font-weight:650;box-shadow:0 6px 16px -6px rgba(79,70,229,.6);
+}
+.pf-name{font-size:16.5px;font-weight:660;letter-spacing:-.2px}
+.pf-role{font-size:12px;color:var(--text3);margin-top:3px;display:flex;align-items:center;gap:6px}
+.pf-badge{
+  display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:5px;
+  font-size:10.5px;font-weight:600;background:var(--accent-soft);color:var(--accent-text);
+}
+.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.pf-cell{background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:9px 11px;min-width:0}
+.pf-cell span{display:block;font-size:11px;color:var(--text3)}
+.pf-cell b{
+  display:block;font-size:13px;font-weight:620;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.pf-quota{background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:10px 11px}
+.pf-quota .pq-l{display:flex;align-items:baseline;gap:5px;font-size:11.5px;color:var(--text2);font-variant-numeric:tabular-nums}
+.pf-quota .pq-l b{color:var(--text);font-weight:640}
+.pf-quota .pq-l em{margin-left:auto;font-style:normal;color:var(--text3);font-size:11px}
+.pf-quota .q-bar{margin-top:7px}
+.pf-sec{
+  display:flex;align-items:center;gap:9px;margin:20px 0 12px;
+  font-size:12.5px;font-weight:620;color:var(--text2);
+}
+.pf-sec::after{content:"";flex:1;height:1px;background:var(--border2)}
+.pf-sec .lnk{margin-left:0;font-size:11.5px;font-weight:500;color:var(--accent-text)}
+.pf-field{position:relative;margin-bottom:11px}
+.pf-field label{display:block;font-size:12px;font-weight:550;color:var(--text2);margin-bottom:6px}
+.pf-field .input{padding-right:44px}
+.pf-eye{
+  position:absolute;right:5px;bottom:4px;width:30px;height:30px;border-radius:7px;
+  display:grid;place-items:center;color:var(--text3);transition:.12s;
+}
+.pf-eye:hover{background:var(--hover);color:var(--text2)}
+.pf-eye.on{color:var(--accent)}
+.pf-eye .ic-off{display:none}
+.pf-eye.on .ic-off{display:block}
+.pf-eye.on .ic-on{display:none}
+.pf-msg{font-size:12px;line-height:1.5;margin:2px 0 0;min-height:18px;color:var(--text3)}
+.pf-msg.err{color:var(--danger)}
+.pf-msg.ok{color:var(--ok)}
+.pf-hint{font-size:11.5px;color:var(--text3);line-height:1.6;margin:0 0 12px}
+
+/* ---------------- 关于 ---------------- */
+.ab-dialog{max-width:462px;max-height:min(92vh,800px);display:flex;flex-direction:column;position:relative}
+.ab-dialog .dbody{padding:24px 22px 20px;overflow-y:auto;flex:1;min-height:0;overscroll-behavior:contain}
+.ab-x{
+  position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:8px;z-index:2;
+  display:grid;place-items:center;color:var(--text3);transition:.12s;
+}
+.ab-x:hover{background:var(--hover);color:var(--text)}
+.ab-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.ab-logo{
+  width:46px;height:46px;border-radius:13px;flex:none;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;
+  box-shadow:0 8px 20px -8px rgba(79,70,229,.65);
+}
+.ab-name{font-size:17px;font-weight:660;letter-spacing:-.2px}
+.ab-ver{font-size:11.5px;color:var(--text3);margin-top:3px}
+.ab-desc{font-size:12.5px;color:var(--text2);line-height:1.65;margin:0 0 14px}
+.ab-rows{border:1px solid var(--border2);border-radius:11px;overflow:hidden;margin-bottom:16px}
+.ab-row{display:flex;align-items:center;gap:10px;padding:8px 12px;font-size:12.5px;border-bottom:1px solid var(--border2)}
+.ab-row:last-child{border-bottom:none}
+.ab-row .k{flex:none;width:66px;color:var(--text3)}
+.ab-row .v{min-width:0;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ab-row .v a{color:var(--accent-text)}
+.ab-row .v a:hover{text-decoration:underline}
+.ab-row .own{margin-left:auto;font-size:11.5px;color:var(--text3);flex:none}
+.ab-donate{
+  border:1px solid var(--border2);border-radius:12px;padding:13px;background:var(--bg);
+}
+.ab-donate h4{
+  margin:0 0 8px;font-size:13px;font-weight:640;display:flex;align-items:center;gap:7px;
+}
+.ab-donate h4 svg{color:#e5484d}
+.ab-quotes{margin:0 0 13px;padding:0;list-style:none}
+.ab-quotes li{
+  font-size:12px;color:var(--text2);line-height:1.75;position:relative;padding-left:12px;
+}
+.ab-quotes li::before{content:"·";position:absolute;left:2px;color:var(--text3)}
+.ab-qr{display:flex;gap:10px}
+.ab-qr figure{margin:0;flex:1;min-width:0;text-align:center}
+.ab-qr .shot{
+  display:block;width:100%;height:176px;border-radius:10px;overflow:hidden;
+  border:1px solid var(--border);background:#fff;cursor:zoom-in;transition:.14s;
+}
+.ab-qr .shot:hover{border-color:var(--accent);transform:translateY(-1px)}
+.ab-qr .shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:center top}
+.ab-qr figcaption{font-size:11.5px;color:var(--text3);margin-top:7px}
+.ab-tip{font-size:11px;color:var(--text3);margin:11px 0 0;line-height:1.6}
+
+/* 二维码大图 */
+#qrView{
+  position:fixed;inset:0;z-index:95;background:rgba(6,8,12,.86);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;padding:24px;animation:fade .14s;
+}
+#qrView img{
+  max-width:min(92vw,520px);max-height:88vh;border-radius:14px;background:#fff;
+  box-shadow:0 30px 80px rgba(0,0,0,.55);
+}
+#qrView .qr-x{
+  position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:10px;
+  display:grid;place-items:center;color:#fff;background:rgba(255,255,255,.13);
+}
+#qrView .qr-x:hover{background:rgba(255,255,255,.26)}
 
 /* ---------------- 面包屑 + 工具条 ---------------- */
 .crumbbar{
@@ -778,12 +941,17 @@ svg{display:block;flex:none}
 /* 移动端 */
 @media (max-width:720px){
   .brand-name,.vsep,#btnRefresh,#btnTheme,.crumb-ghost{display:none}
-  /* 手机顶栏挤，容量块缩成短格式，只留「1.2G / 10G」加一条进度线 */
-  .quota{width:68px;padding:0 7px;gap:2px}
-  .quota .q-l{display:none}
-  .quota .q-s{display:inline;font-size:10px;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--text2);white-space:nowrap}
-  .quota.warn .q-s{color:var(--quota-warn)}
-  .quota.full .q-s{color:var(--quota-full)}
+  /* 手机顶栏挤：容量块压扁，只留「108M / 10G」+ 一条进度线，百分比让位 */
+  .quota{width:118px;height:34px;padding:4px 8px 5px;gap:4px}
+  .q-line{font-size:10px;gap:3px}
+  .q-line b{font-size:10.5px}
+  .q-line .q-ico{display:none}
+  .q-pct{display:none}
+  .q-bar{height:3px}
+  #userMenu{right:8px;width:min(252px,calc(100vw - 16px))}
+  .pf-dialog .dbody{padding:18px 16px 4px}
+  .pf-dialog .dfoot{padding:12px 16px 16px}
+  .ab-dialog .dbody{padding:20px 16px 4px}
   .brand{padding-right:0}
   .topbar{gap:6px;padding:0 10px}
   .search{margin-left:0;max-width:none}
@@ -810,6 +978,11 @@ svg{display:block;flex:none}
   .card .cbody{padding:8px 9px 9px}
   .card .cmeta{font-size:11px}
   .login-card{padding:26px 20px 20px}
+}
+/* 小屏再挤一层：logo 让位，把宽度留给搜索和容量 */
+@media (max-width:430px){
+  .brand{display:none}
+  .quota{width:110px}
 }
 </style>
 </head>
@@ -865,20 +1038,22 @@ svg{display:block;flex:none}
       <div class="brand-name">云盘<span>R2</span></div>
     </div>
 
+    <!-- 容量放在左边，和品牌挨着，一眼能看到还剩多少 -->
+    <button class="quota" id="quota" title="云盘容量">
+      <div class="q-line">
+        <svg class="q-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v6c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3v-6"/><path d="M4.5 11.5v6c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3v-6"/></svg>
+        <b id="qUsed">—</b><em>/</em><span id="qTotal">10 GB</span>
+        <span class="q-pct" id="qPct"></span>
+      </div>
+      <div class="q-bar"><i id="qFill"></i></div>
+    </button>
+
     <div class="search">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
       <input id="q" placeholder="搜索当前目录…" spellcheck="false" autocomplete="off">
       <button class="clr hidden" id="qClr" title="清除">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
-    </div>
-
-    <div class="quota" id="quota" title="云盘容量">
-      <div class="q-line">
-        <span class="q-l"><b id="qUsed">—</b><span class="q-sep">&nbsp;/&nbsp;</span><em id="qTotal">10 GB</em></span>
-        <span class="q-s" id="qShort">—</span>
-      </div>
-      <div class="q-bar"><i id="qFill"></i></div>
     </div>
 
     <div class="topbar-actions">
@@ -1034,6 +1209,152 @@ svg{display:block;flex:none}
   <strong>松开即可上传</strong>
   <span id="dropHint"></span>
 </div></div>
+
+<!-- ============ 账号菜单 ============ -->
+<div id="userMenu" class="hidden">
+  <div class="um-head">
+    <div class="um-ava" id="umAva">T</div>
+    <div class="um-id">
+      <b id="umName">—</b>
+      <span id="umRole">管理员</span>
+    </div>
+  </div>
+  <div class="um-quota">
+    <div class="um-qt"><span>已用</span><b id="umUsed">—</b><span id="umTotal">/ —</span><em id="umPct"></em></div>
+    <div class="um-bar"><i id="umFill"></i></div>
+  </div>
+  <div class="um-sep"></div>
+  <button class="um-item" id="umProfile">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+    个人信息
+  </button>
+  <button class="um-item" id="umAbout">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.1"/></svg>
+    关于
+  </button>
+  <div class="um-sep"></div>
+  <button class="um-item danger" id="umLogout">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+    退出登录
+    <span class="um-k">清除凭据</span>
+  </button>
+</div>
+
+<!-- ============ 个人信息 ============ -->
+<div id="profileOv" class="overlay hidden">
+  <div class="dialog pf-dialog" role="dialog" aria-modal="true" aria-label="个人信息">
+    <div class="dbody">
+      <div class="pf-top">
+        <div class="pf-ava" id="pfAva">T</div>
+        <div style="min-width:0">
+          <div class="pf-name" id="pfName">—</div>
+          <div class="pf-role"><span class="pf-badge" id="pfRole">管理员</span><span id="pfPwSrc">—</span></div>
+        </div>
+      </div>
+      <div class="pf-grid">
+        <div class="pf-cell"><span>用户名</span><b id="pfUser">—</b></div>
+        <div class="pf-cell"><span>分享链接</span><b id="pfShares">—</b></div>
+        <div class="pf-cell"><span>文件 / 文件夹</span><b id="pfCounts">—</b></div>
+        <div class="pf-cell"><span>访问协议</span><b>WebDAV Class 2</b></div>
+      </div>
+      <div class="pf-quota">
+        <div class="pq-l"><span>已用空间</span><b id="pfUsed">—</b><em id="pfTotal">—</em></div>
+        <div class="q-bar"><i id="pfFill"></i></div>
+      </div>
+
+      <div class="pf-sec">修改密码</div>
+      <p class="pf-hint">必须输入当前密码才能改。改完立即生效，已经连着的 WebDAV 客户端要换成新密码，否则会一直 401。</p>
+      <div class="pf-field">
+        <label for="pfOld">原密码</label>
+        <input class="input" id="pfOld" type="password" autocomplete="current-password" placeholder="请输入当前密码">
+        <button type="button" class="pf-eye" data-eye="pfOld" title="显示密码" aria-label="显示密码">
+          <span class="ic-on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+          <span class="ic-off"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a18.3 18.3 0 0 1-3.3 4.2"/><path d="M6.4 6.5A18.2 18.2 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 4.7-1.2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m2 2 20 20"/></svg></span>
+        </button>
+      </div>
+      <div class="pf-field">
+        <label for="pfNew">新密码</label>
+        <input class="input" id="pfNew" type="password" autocomplete="new-password" placeholder="至少 5 位">
+        <button type="button" class="pf-eye" data-eye="pfNew" title="显示密码" aria-label="显示密码">
+          <span class="ic-on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+          <span class="ic-off"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a18.3 18.3 0 0 1-3.3 4.2"/><path d="M6.4 6.5A18.2 18.2 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 4.7-1.2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m2 2 20 20"/></svg></span>
+        </button>
+      </div>
+      <div class="pf-field">
+        <label for="pfNew2">确认新密码</label>
+        <input class="input" id="pfNew2" type="password" autocomplete="new-password" placeholder="再输入一次">
+        <button type="button" class="pf-eye" data-eye="pfNew2" title="显示密码" aria-label="显示密码">
+          <span class="ic-on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+          <span class="ic-off"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a18.3 18.3 0 0 1-3.3 4.2"/><path d="M6.4 6.5A18.2 18.2 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 4.7-1.2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m2 2 20 20"/></svg></span>
+        </button>
+      </div>
+      <p class="pf-msg" id="pfMsg"></p>
+    </div>
+    <div class="dfoot">
+      <button class="btn btn-ghost" id="pfClose">关闭</button>
+      <button class="btn btn-primary" id="pfSave">保存新密码</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 关于 ============ -->
+<div id="aboutOv" class="overlay hidden">
+  <div class="dialog ab-dialog" role="dialog" aria-modal="true" aria-label="关于">
+    <button class="ab-x" id="abClose" title="关闭">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="dbody">
+      <div class="ab-head">
+        <div class="ab-logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        </div>
+        <div style="min-width:0">
+          <div class="ab-name">${APP_NAME}</div>
+          <div class="ab-ver">版本 ${APP_VERSION} · ${LICENSE_NAME} License</div>
+        </div>
+      </div>
+      <p class="ab-desc">${APP_TAGLINE}</p>
+
+      <div class="ab-rows">
+        <div class="ab-row"><span class="k">作者</span><span class="v">${AUTHOR} · ${AUTHOR_DESC}</span></div>
+        <div class="ab-row"><span class="k">项目地址</span><span class="v"><a href="${REPO_URL}" target="_blank" rel="noopener noreferrer">${REPO_URL.replace("https://", "")}</a></span></div>
+        <div class="ab-row"><span class="k">技术栈</span><span class="v">Workers · R2 · Durable Objects</span></div>
+        <div class="ab-row"><span class="k">开源协议</span><span class="v">${LICENSE_NAME}</span></div>
+      </div>
+
+      <div class="ab-donate">
+        <h4>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.7-9.3-9A5.4 5.4 0 0 1 12 6.5 5.4 5.4 0 0 1 21.3 12C19.5 16.3 12 21 12 21Z"/></svg>
+          打赏作者
+        </h4>
+        <ul class="ab-quotes">${DONATE_LINES.map((t) => `<li>${t}</li>`).join("")}</ul>
+        <div class="ab-qr">
+          <figure>
+            <span class="shot" data-qr="/__asset/donate-wx.jpg" data-label="微信收款码">
+              <img src="/__asset/donate-wx.jpg" alt="微信收款码" loading="lazy">
+            </span>
+            <figcaption>微信</figcaption>
+          </figure>
+          <figure>
+            <span class="shot" data-qr="/__asset/donate-zfb.jpg" data-label="支付宝收款码">
+              <img src="/__asset/donate-zfb.jpg" alt="支付宝收款码" loading="lazy">
+            </span>
+            <figcaption>支付宝</figcaption>
+          </figure>
+        </div>
+        <p class="ab-tip">点二维码可以放大，长按保存到相册再用对应的 App 扫码。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 二维码大图 -->
+<div id="qrView" class="hidden">
+  <button class="qr-x" id="qrClose" title="关闭">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+  <img id="qrImg" alt="收款码">
+</div>
 
 <div id="toasts"></div>
 <input type="file" id="fileInput" multiple class="hidden">
@@ -2930,22 +3251,6 @@ async function editExisting(it){
    进度条按 9.9 GB 归一：走满就是「存不进去了」，不会让人以为还剩 10%。 */
 var QP = null, quotaSeq = 0, quotaDirty = false;
 
-/** 顶栏用的短格式：1.2G / 512M
-    注意：这里是模板字符串内部，正则里的 \. 会被 TS 吃掉变成 . ，
-    会导致 "10.0" 被 .0$ 误伤成 "1"，所以这里只用字符串判断，不用正则。 */
-function fmtSizeShort(n){
-  if(n == null || isNaN(n)) return "—";
-  if(n >= 1073741824){
-    var g = n / 1073741824;
-    var s = g >= 10 ? String(Math.round(g)) : g.toFixed(1);
-    if(s.length > 2 && s.slice(-2) === ".0") s = s.slice(0, -2);
-    return s + "G";
-  }
-  if(n >= 1048576) return Math.round(n / 1048576) + "M";
-  if(n >= 1024) return Math.round(n / 1024) + "K";
-  return Math.round(n) + "B";
-}
-
 function loadQuota(fresh, cb){
   if(!S.auth){ if(cb) cb(QP); return; }
   var seq = ++quotaSeq;
@@ -2961,14 +3266,16 @@ function loadQuota(fresh, cb){
 
 function applyQuota(u){
   QP = u;
+  var pct = u.limit ? Math.min(100, (u.used / u.limit) * 100) : 0;
+  u.percent = pct;
+  u.nearLimit = pct >= 85;
+  u.full = u.limit > 0 && u.used >= u.limit;
   var el = $("quota");
   if(!el) return;
-  var used = $("qUsed"), tot = $("qTotal"), sh = $("qShort"), fill = $("qFill");
+  var used = $("qUsed"), tot = $("qTotal"), pctEl = $("qPct"), fill = $("qFill");
   if(used) used.textContent = fmtSize(u.used);
   if(tot) tot.textContent = fmtSize(u.total);
-  if(sh) sh.textContent = fmtSizeShort(u.used) + " / " + fmtSizeShort(u.total);
-  var pct = u.limit ? Math.min(100, (u.used / u.limit) * 100) : 0;
-  /* 有数据时至少留 0.6%，否则一颗灰尘大小的文件看起来像没画 */
+  if(pctEl) pctEl.textContent = (u.used > 0 && pct < 1) ? "<1%" : Math.round(pct) + "%";
   if(fill){
     fill.style.width = (u.used > 0 && pct < 0.6 ? 0.6 : pct) + "%";
     /* 用量很小时按比例只有一两像素，给个下限，否则看起来像没画 */
@@ -2983,6 +3290,21 @@ function applyQuota(u){
     " · 剩余 " + fmtSize(Math.max(0, u.total - u.used)) +
     " · 写入上限 " + fmtSize(u.limit) +
     " · " + u.files + " 个文件 / " + u.dirs + " 个文件夹");
+  paintQuota();
+}
+
+/** 顶栏、账号菜单、个人信息三处的容量条共用同一份数字 */
+function paintQuota(){
+  if(!QP) return;
+  var pct = Math.max(0, Math.min(100, QP.percent || 0));
+  var width = (QP.used > 0 && pct < 0.6 ? 0.6 : pct) + "%";
+  var pf = $("pfFill"); if(pf){ pf.style.width = width; pf.style.minWidth = QP.used > 0 ? "2px" : "0"; }
+  var um = $("umFill"); if(um){ um.style.width = width; um.style.minWidth = QP.used > 0 ? "2px" : "0"; }
+  if($("umUsed")) $("umUsed").textContent = fmtSize(QP.used);
+  if($("umTotal")) $("umTotal").textContent = "/ " + fmtSize(QP.total);
+  if($("umPct")) $("umPct").textContent = (QP.used > 0 && pct < 1) ? "<1%" : Math.round(pct) + "%";
+  if($("pfUsed")) $("pfUsed").textContent = fmtSize(QP.used) + " / " + fmtSize(QP.total);
+  if($("pfTotal")) $("pfTotal").textContent = "剩余 " + fmtSize(Math.max(0, QP.total - QP.used));
 }
 
 function quotaTip(){
@@ -2990,6 +3312,184 @@ function quotaTip(){
   var full = Math.max(0, QP.total - QP.used);
   toast("已用 " + fmtSize(QP.used) + " / " + fmtSize(QP.total) + " · 剩余 " + fmtSize(full), QP.full ? "err" : "ok");
 }
+
+/* ================= 账号菜单 / 个人信息 / 关于 ================= */
+var ACCT = null;
+
+function initials(name){
+  var s = String(name || "A").trim();
+  return (s ? s.slice(0, 1) : "A").toUpperCase();
+}
+
+function loadAccount(){
+  return req("GET", "/__api/account").then(function(r){
+    if(r.status === 401){ logout("登录已失效，请重新登录"); return null; }
+    if(!r.ok) return null;
+    return r.json();
+  }).then(function(j){
+    if(!j) return null;
+    j.at = Date.now();
+    ACCT = j;
+    fillUserMenu();
+    fillProfile();
+    if(j.quota){
+      applyQuota({
+        used: j.quota.used, total: j.quota.total, limit: j.quota.limit,
+        files: j.quota.files, dirs: j.quota.dirs
+      });
+    }
+    return j;
+  }).catch(function(){ return null; });
+}
+
+function fillUserMenu(){
+  var u = (ACCT && ACCT.user) || S.user || DEFAULT_USER;
+  if($("umAva")) $("umAva").textContent = initials(u);
+  if($("umName")) $("umName").textContent = u;
+  if($("umRole")) $("umRole").textContent = (ACCT && ACCT.role) || "管理员";
+  paintQuota();
+}
+
+function openUserMenu(){
+  var m = $("userMenu");
+  if(!m) return;
+  fillUserMenu();
+  m.classList.remove("hidden");
+  if(!ACCT || Date.now() - (ACCT.at || 0) > 30000) loadAccount();
+  if(!QP) loadQuota(true);
+}
+function closeUserMenu(){
+  var m = $("userMenu");
+  if(m) m.classList.add("hidden");
+}
+
+function fillProfile(){
+  var u = (ACCT && ACCT.user) || S.user || DEFAULT_USER;
+  if($("pfAva")) $("pfAva").textContent = initials(u);
+  if($("pfName")) $("pfName").textContent = u;
+  if($("pfRole")) $("pfRole").textContent = (ACCT && ACCT.role) || "管理员";
+  if($("pfUser")) $("pfUser").textContent = u;
+  if($("pfShares")) $("pfShares").textContent = ACCT ? (ACCT.shares.count + " 条 · " + ACCT.shares.downloads + " 次下载") : "—";
+  if($("pfCounts")) $("pfCounts").textContent = ACCT ? (ACCT.quota.files + " / " + ACCT.quota.dirs) : "—";
+  if($("pfPwSrc")){
+    $("pfPwSrc").textContent = !ACCT ? "—"
+      : ACCT.passwordSource === "custom" ? "密码已在面板中修改过"
+      : "当前是部署时设置的初始密码";
+  }
+}
+
+function setFieldVisible(id, on){
+  var el = $(id);
+  if(!el) return;
+  el.type = on ? "text" : "password";
+  var btn = document.querySelector('.pf-eye[data-eye="' + id + '"]');
+  if(btn){
+    btn.classList.toggle("on", !!on);
+    btn.title = on ? "隐藏密码" : "显示密码";
+    btn.setAttribute("aria-label", on ? "隐藏密码" : "显示密码");
+  }
+}
+
+function openProfile(){
+  closeUserMenu();
+  fillProfile();
+  ["pfOld", "pfNew", "pfNew2"].forEach(function(id){
+    var el = $(id);
+    if(el) el.value = "";
+    setFieldVisible(id, false);
+  });
+  if($("pfMsg")){ $("pfMsg").textContent = ""; $("pfMsg").className = "pf-msg"; }
+  $("profileOv").classList.remove("hidden");
+  setTimeout(function(){ if($("pfOld")) $("pfOld").focus(); }, 60);
+  loadAccount();
+}
+function closeProfile(){
+  var el = $("profileOv");
+  if(el) el.classList.add("hidden");
+}
+
+/** 改完密码后，本机保存的凭据要同步换成新的，否则下一次请求就 401 */
+function rememberAuth(user, pass){
+  applyAuth(user, pass);
+  var rec = JSON.stringify({ auth: S.auth, user: user });
+  try {
+    if(localStorage.getItem("dav.auth")) localStorage.setItem("dav.auth", rec);
+    else sessionStorage.setItem("dav.auth", rec);
+  } catch(e){}
+}
+
+function pfMsg(text, kind){
+  var el = $("pfMsg");
+  if(!el) return;
+  el.textContent = text || "";
+  el.className = "pf-msg" + (kind ? " " + kind : "");
+}
+
+function savePassword(){
+  var oldPw = $("pfOld") ? $("pfOld").value : "";
+  var np = $("pfNew") ? $("pfNew").value : "";
+  var np2 = $("pfNew2") ? $("pfNew2").value : "";
+
+  if(!oldPw){ pfMsg("请输入原密码", "err"); $("pfOld").focus(); return; }
+  if(!np){ pfMsg("请输入新密码", "err"); $("pfNew").focus(); return; }
+  if(np.length < 5){ pfMsg("新密码至少 5 位", "err"); $("pfNew").focus(); return; }
+  if(np !== np2){ pfMsg("两次输入的新密码不一致", "err"); $("pfNew2").focus(); return; }
+  if(np === oldPw){ pfMsg("新密码不能和原密码相同", "err"); $("pfNew").focus(); return; }
+
+  var btn = $("pfSave");
+  btn.disabled = true;
+  btn.textContent = "保存中…";
+  pfMsg("");
+
+  req("POST", "/__api/account/password", {
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ oldPassword: oldPw, newPassword: np })
+  }).then(function(r){
+    return r.json().then(function(j){ return { ok: r.ok, status: r.status, body: j }; })
+      .catch(function(){ return { ok: r.ok, status: r.status, body: {} }; });
+  }).then(function(res){
+    if(!res.ok){
+      var m = (res.body && res.body.error) || ("修改失败（" + res.status + "）");
+      throw new Error(m);
+    }
+    rememberAuth(S.user, np);
+    pfMsg("密码已更新，下次登录请使用新密码", "ok");
+    ["pfOld", "pfNew", "pfNew2"].forEach(function(id){
+      var el = $(id);
+      if(el) el.value = "";
+      setFieldVisible(id, false);
+    });
+    toast("密码已更新", "ok");
+    ACCT = null;
+    loadAccount();
+    loadQuota(true);
+  }).catch(function(e){
+    pfMsg(e.message || "修改失败", "err");
+  }).then(function(){
+    btn.disabled = false;
+    btn.textContent = "保存新密码";
+  });
+}
+
+function openAbout(){
+  closeUserMenu();
+  $("aboutOv").classList.remove("hidden");
+}
+function closeAbout(){
+  var el = $("aboutOv");
+  if(el) el.classList.add("hidden");
+}
+function openQr(src){
+  if(!src) return;
+  $("qrImg").src = src;
+  $("qrView").classList.remove("hidden");
+}
+function closeQr(){
+  var el = $("qrView");
+  if(el) el.classList.add("hidden");
+  $("qrImg").removeAttribute("src");
+}
+
 
 /* ================= 上传 ================= */
 var Q = [], Qactive = 0, Qtimer = null;
@@ -3242,7 +3742,7 @@ function showApp(){
   $("app").classList.remove("hidden");
   var initial = (S.user || "A").slice(0, 1).toUpperCase();
   $("btnUser").textContent = initial;
-  $("btnUser").title = S.user + " · 点击退出";
+  $("btnUser").title = S.user + " · 点击查看账号";
   navigate("/", false);
   /* 进来先取一次容量，顶栏不会空着 */
   QP = null;
@@ -3255,7 +3755,9 @@ function logout(msg){
     localStorage.removeItem("dav.user");
   } catch(e){}
   S.auth = ""; S.items = []; S.sel = {}; S.path = "/";
+  ACCT = null;
   hideBoot();
+  closeUserMenu(); closeProfile(); closeAbout(); closeQr();
   $("app").classList.add("hidden");
   $("login").classList.remove("hidden");
   $("p").value = "";
@@ -3320,10 +3822,50 @@ function bindGlobal(){
   };
   $("btnRefresh").onclick = function(){ load(); toast("已刷新", "info"); };
   $("btnUp").onclick = function(){ if(S.path !== "/") navigate(parentOf(S.path), true); };
-  $("btnUser").onclick = async function(){
+  $("btnUser").onclick = function(e){
+    e.stopPropagation();
+    var m = $("userMenu");
+    if(m.classList.contains("hidden")) openUserMenu();
+    else closeUserMenu();
+  };
+  $("umProfile").onclick = openProfile;
+  $("umAbout").onclick = openAbout;
+  $("umLogout").onclick = async function(){
+    closeUserMenu();
     var ok = await confirmBox("退出登录", "将清除本机保存的登录凭据。", "退出");
     if(ok) logout();
   };
+  $("pfClose").onclick = closeProfile;
+  $("pfSave").onclick = savePassword;
+  $("abClose").onclick = closeAbout;
+  $("qrClose").onclick = closeQr;
+  $("qrView").addEventListener("click", function(e){
+    if(e.target === $("qrView")) closeQr();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".pf-eye"), function(btn){
+    btn.onclick = function(){
+      var id = btn.getAttribute("data-eye");
+      var el = $(id);
+      if(!el) return;
+      setFieldVisible(id, el.type === "password");
+      try { el.focus({ preventScroll: true }); } catch(e){}
+    };
+  });
+  ["profileOv", "aboutOv"].forEach(function(id){
+    var ov = $(id);
+    ov.addEventListener("mousedown", function(e){
+      if(e.target === ov){ if(id === "profileOv") closeProfile(); else closeAbout(); }
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("#aboutOv .shot"), function(el){
+    el.onclick = function(){ openQr(el.getAttribute("data-qr")); };
+  });
+  ["pfOld", "pfNew", "pfNew2"].forEach(function(id){
+    var el = $(id);
+    if(el) el.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){ e.preventDefault(); savePassword(); }
+    });
+  });
   $("btnViewList").onclick = function(){ S.view = "list"; localStorage.setItem("dav.view", "list"); render(); };
   $("btnViewGrid").onclick = function(){ S.view = "grid"; localStorage.setItem("dav.view", "grid"); render(); };
   $("btnTheme").onclick = function(){
@@ -3407,6 +3949,10 @@ function bindGlobal(){
   document.addEventListener("keydown", function(e){
     var inField = /INPUT|TEXTAREA/.test((e.target.tagName || "")) || e.target.isContentEditable;
     if(e.key === "Escape"){
+      if(!$("qrView").classList.contains("hidden")){ closeQr(); return; }
+      if(!$("aboutOv").classList.contains("hidden")){ closeAbout(); return; }
+      if(!$("profileOv").classList.contains("hidden")){ closeProfile(); return; }
+      if(!$("userMenu").classList.contains("hidden")){ closeUserMenu(); return; }
       if(!$("editor").classList.contains("hidden")){ closeEditor(); return; }
       if(!$("preview").classList.contains("hidden")){ closePreview(); return; }
       closeCtx(); closeDialog();
@@ -3446,6 +3992,8 @@ function bindGlobal(){
 
   document.addEventListener("click", function(e){
     if(ctxEl && !ctxEl.contains(e.target)) closeCtx();
+    var um = $("userMenu");
+    if(um && !um.classList.contains("hidden") && !um.contains(e.target) && !e.target.closest("#btnUser")) closeUserMenu();
   });
   window.addEventListener("beforeunload", function(e){
     var running = Q.some(function(t){ return t.status === "run" || t.status === "wait"; });

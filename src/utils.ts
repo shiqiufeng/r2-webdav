@@ -211,7 +211,7 @@ export function checkReadPreconditions(req: Request, state: ConditionalState): R
 /* 鉴权                                                                */
 /* ------------------------------------------------------------------ */
 
-function constantTimeEqual(a: string, b: string): boolean {
+export function constantTimeEqual(a: string, b: string): boolean {
   // 先对齐长度，再做定长遍历比较，避免长度/前缀时间侧信道
   const enc = new TextEncoder();
   const x = enc.encode(a);
