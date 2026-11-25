@@ -46,6 +46,7 @@ import { handleShareApi, handleShareRoute, isSharePath } from "./share-api";
 import { clearDirStatCache, handleDirStatApi, statDirTree } from "./dirstat";
 import { checkSpace, handleQuotaApi, insufficientStorage, invalidateUsage } from "./quota";
 import { handlePreviewApi, verifyPreviewToken } from "./preview";
+import { isFaststartCandidate, planFaststart, streamVirtualRange } from "./mp4";
 import { authenticateAsync } from "./auth";
 import { handleAccountApi } from "./account-api";
 import { handleDonateAsset } from "./qr";
@@ -224,6 +225,9 @@ function handleOptions(request: Request): Response {
  * 这里直接复用 handleGet，Range / ETag / 206 全部照旧，
  * 只额外把 Content-Disposition 改成 inline —— 即使上传时被标成 attachment，
  * 在预览器里也要内联渲染而不是触发下载。
+ *
+ * mp4 系先尝试 faststart 重排：moov 在文件尾部时浏览器必会再发一条尾部 Range，
+ * 该并发请求在部分代理链路上会挂死，播放器就一直转圈。重排成 moov 在前可彻底避免。
  */
 async function handleSignedPreview(request: Request, env: Env, url: URL): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -232,6 +236,11 @@ async function handleSignedPreview(request: Request, env: Env, url: URL): Promis
   const token = url.pathname.slice("/__p/".length);
   const path = await verifyPreviewToken(env, token);
   if (!path) return textResponse(403, "预览链接已过期，请刷新页面后重试");
+
+  if (isFaststartCandidate(baseName(path))) {
+    const fast = await handleFaststartPreview(request, env, path);
+    if (fast) return fast;
+  }
 
   const res = await handleGet(request, env, path, request.method === "HEAD");
   if (!res.ok) return res;
@@ -244,6 +253,95 @@ async function handleSignedPreview(request: Request, env: Env, url: URL): Promis
     headers.set("Content-Type", mimeOf(name));
   }
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+}
+
+/**
+ * 用 FixedLengthStream 包一层，让运行时保留 Content-Length（否则会退化成 chunked）。
+ * 播放器拿到准确长度后拖进度条、判断缓冲更稳；运行时不支持时原样返回。
+ */
+function fixedLengthBody(stream: ReadableStream<Uint8Array>, length: number): ReadableStream {
+  const Ctor = (globalThis as unknown as { FixedLengthStream?: new (n: number) => {
+    readable: ReadableStream;
+    writable: WritableStream;
+  } }).FixedLengthStream;
+  if (typeof Ctor !== "function") return stream;
+  const { readable, writable } = new Ctor(length);
+  void stream.pipeTo(writable).catch(() => {});
+  return readable;
+}
+
+/**
+ * mp4 / m4v / mov 的 faststart 预览。
+ * 返回 null 表示不适用（布局异常、索引过大、读取失败…），调用方回退原始字节流。
+ */
+async function handleFaststartPreview(
+  request: Request,
+  env: Env,
+  path: string,
+): Promise<Response | null> {
+  const key = keyOf(path);
+  const obj = await env.BUCKET.head(key);
+  if (!obj || obj.size < 2048) return null;
+
+  const plan = await planFaststart(env, key, obj.size);
+  if (!plan) return null;
+
+  const name = baseName(path);
+  const headers: Record<string, string> = {
+    ...DAV_HEADERS,
+    ETag: obj.httpEtag,
+    "Last-Modified": httpDate(obj.uploaded.getTime()),
+    "Content-Type": obj.httpMetadata?.contentType ?? mimeOf(name),
+    "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(name)}`,
+    "Cache-Control": "private, max-age=600",
+    "Accept-Ranges": "bytes",
+  };
+  if (!headers["Content-Type"] || headers["Content-Type"] === "application/octet-stream") {
+    headers["Content-Type"] = mimeOf(name);
+  }
+
+  const notModified = checkReadPreconditions(request, {
+    etag: obj.httpEtag,
+    lastModified: obj.uploaded.getTime(),
+    exists: true,
+  });
+  if (notModified) return notModified;
+
+  const rangeHeader = request.headers.get("Range");
+  const range = rangeHeader ? parseRange(rangeHeader, obj.size) : null;
+  if (range === "invalid") {
+    return new Response(null, {
+      status: 416,
+      headers: { ...headers, "Content-Range": `bytes */${obj.size}` },
+    });
+  }
+
+  if (request.method === "HEAD") {
+    return new Response(null, {
+      status: 200,
+      headers: { ...headers, "Content-Length": String(obj.size) },
+    });
+  }
+
+  if (range) {
+    const body = await streamVirtualRange(env, key, plan, range.offset, range.length);
+    if (!body) return null;
+    return new Response(fixedLengthBody(body, range.length), {
+      status: 206,
+      headers: {
+        ...headers,
+        "Content-Length": String(range.length),
+        "Content-Range": `bytes ${range.offset}-${range.end}/${obj.size}`,
+      },
+    });
+  }
+
+  const body = await streamVirtualRange(env, key, plan, 0, obj.size);
+  if (!body) return null;
+  return new Response(fixedLengthBody(body, obj.size), {
+    status: 200,
+    headers: { ...headers, "Content-Length": String(obj.size) },
+  });
 }
 
 /* ================================================================== */

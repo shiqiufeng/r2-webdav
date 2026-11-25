@@ -3,7 +3,7 @@
  */
 
 export const APP_NAME = "云盘 R2";
-export const APP_VERSION = "1.3.0";
+export const APP_VERSION = "1.3.1";
 export const APP_TAGLINE = "基于 Cloudflare Workers + R2 的 WebDAV 网盘，前后端都在一个 Worker 里。";
 
 export const AUTHOR = "流水";

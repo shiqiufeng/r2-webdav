@@ -837,6 +837,18 @@ svg{display:block;flex:none}
 .pv-loading{color:#fff;opacity:.72;font-size:13px;display:flex;align-items:center;gap:10px}
 .pv-note{color:#fff;opacity:.45;font-size:11.5px;margin-top:12px;line-height:1.6;max-width:420px;text-align:center}
 
+/* 视频缓冲状态：慢链路时给出可见进度，避免看起来像卡死 */
+.pv-buf{
+  position:absolute;left:50%;top:16px;transform:translateX(-50%);z-index:4;
+  display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;
+  background:rgba(16,19,26,.78);border:1px solid rgba(255,255,255,.13);color:#e8ecf6;
+  font-size:12px;font-variant-numeric:tabular-nums;pointer-events:none;
+}
+.pv-buf .spinner{width:12px;height:12px;border-width:2px}
+.pv-buf .pct{opacity:.72}
+.pv-buf.hide{display:none}
+.pv-buf.warn{background:rgba(120,53,15,.85);border-color:rgba(251,191,36,.35)}
+
 @media (max-width:640px){
   .pv-acts button .lbl{display:none}
   .pv-acts button{padding:0 9px}
@@ -2693,7 +2705,7 @@ async function saveEditor(){
 /* ================= 预览 =================
    单击即预览：图片 / 视频 / 音频 / PDF / 网页 / Markdown / JSON / CSV / 代码 / 纯文本 /
    docx / xlsx / pptx。媒体走签名直链，浏览器原生 Range 边下边播，不再把整个文件读进内存。 */
-var PV = { list: [], idx: 0, it: null, seq: 0, tokens: {} };
+var PV = { list: [], idx: 0, it: null, seq: 0, tokens: {}, timer: 0 };
 var PV_TEXT_MAX = 6 * 1024 * 1024;
 var PV_OFFICE_MAX = 24 * 1024 * 1024;
 var NL = String.fromCharCode(10), TAB = String.fromCharCode(9);
@@ -2767,9 +2779,14 @@ function pvUrl(path){
   });
 }
 
+function pvStopTimer(){
+  if(PV.timer){ clearInterval(PV.timer); PV.timer = 0; }
+}
+
 function closePreview(){
   PV.seq++;
   PV.it = null;
+  pvStopTimer();
   $("pvBody").innerHTML = "";
   $("preview").classList.add("hidden");
 }
@@ -2837,11 +2854,41 @@ async function pvRender(){
     if(mode === "vid"){
       var uv = await pvUrl(it.path);
       if(seq !== PV.seq) return;
-      box.innerHTML = '<video src="' + uv + '" controls autoplay playsinline preload="metadata"></video>';
+      pvStopTimer();
+      box.innerHTML = '<video src="' + uv + '" controls autoplay playsinline preload="auto"></video>' +
+        '<div class="pv-buf" id="pvBuf"><span class="spinner"></span><span class="txt">缓冲中…</span><span class="pct"></span></div>';
       var vd = box.querySelector("video");
-      if(vd) vd.onerror = function(){
+      if(!vd) return;
+      var buf = box.querySelector("#pvBuf");
+      var startedAt = Date.now();
+      var ready = false;
+
+      var hideBuf = function(){ ready = true; pvStopTimer(); if(buf) buf.classList.add("hide"); };
+      vd.onloadeddata = hideBuf;
+      vd.onplaying = hideBuf;
+      vd.onerror = function(){
+        pvStopTimer();
         pvFallback(it, "预览失败", "这个视频的编码浏览器放不了（常见于 RMVB / WMV / 部分 MKV），下载后用本地播放器可以正常看。");
       };
+
+      /* 慢链路 / 代理挂起时不让它无限转圈：显示已缓冲比例与用时，并给出下载出口 */
+      PV.timer = setInterval(function(){
+        if(ready || !buf || !vd || seq !== PV.seq){ pvStopTimer(); return; }
+        var loaded = 0;
+        try {
+          if(vd.buffered.length) loaded = vd.buffered.end(vd.buffered.length - 1);
+        } catch(e){}
+        var total = vd.duration || it.size || 0;
+        var pct = total > 0 ? Math.min(100, Math.round(loaded / total * 100)) : 0;
+        if(!pct && it.size > 0 && loaded > 0) pct = Math.min(99, Math.round(loaded / it.size * 100));
+        var secs = Math.round((Date.now() - startedAt) / 1000);
+        var txt = buf.querySelector(".txt"), pv = buf.querySelector(".pct");
+        if(txt){
+          txt.textContent = secs < 3 ? "缓冲中…" : (secs < 20 ? "缓冲中… " + secs + "s" : "网络较慢，仍在缓冲 " + secs + "s");
+        }
+        if(pv) pv.textContent = pct > 0 ? pct + "%" : "";
+        if(secs >= 20 && pct < 100) buf.classList.add("warn");
+      }, 500);
       return;
     }
 
