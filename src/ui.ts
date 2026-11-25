@@ -529,33 +529,136 @@ svg{display:block;flex:none}
 
 /* ---------------- 预览 ---------------- */
 #preview{
-  position:fixed;inset:0;z-index:80;background:rgba(6,8,12,.86);backdrop-filter:blur(6px);
+  position:fixed;inset:0;z-index:80;background:rgba(8,10,14,.9);backdrop-filter:blur(10px);
   display:flex;flex-direction:column;animation:fade .14s;
 }
 .pv-head{
-  height:54px;flex:none;display:flex;align-items:center;gap:12px;padding:0 14px;color:#fff;
-  background:linear-gradient(rgba(0,0,0,.35),transparent);
+  height:56px;flex:none;display:flex;align-items:center;gap:12px;padding:0 14px;color:#fff;
+  background:linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,0));position:relative;z-index:3;
 }
-.pv-title{font-size:13.5px;font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pv-sub{font-size:11.5px;opacity:.6;margin-top:1px}
-.pv-acts{margin-left:auto;display:flex;gap:6px}
+.pv-meta{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+.pv-title{
+  font-size:13.5px;font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  display:flex;align-items:center;gap:8px;
+}
+.pv-title .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pv-sub{font-size:11.5px;opacity:.55;margin-top:2px;font-variant-numeric:tabular-nums}
+.pv-acts{margin-left:auto;display:flex;gap:6px;align-items:center}
 .pv-acts button{
   height:32px;padding:0 11px;border-radius:8px;display:flex;align-items:center;gap:6px;
-  background:rgba(255,255,255,.12);color:#fff;font-size:12.5px;transition:.12s;
+  background:rgba(255,255,255,.13);color:#fff;font-size:12.5px;transition:.12s;white-space:nowrap;
 }
-.pv-acts button:hover{background:rgba(255,255,255,.22)}
+.pv-acts button:hover{background:rgba(255,255,255,.24)}
+.pv-acts button:disabled{opacity:.35;pointer-events:none}
 .pv-body{
-  flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:0 18px 26px;
+  flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:0 20px 24px;
+  position:relative;
 }
-.pv-body img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
-.pv-body video,.pv-body audio{max-width:min(100%,1000px);max-height:100%;border-radius:8px}
-.pv-body iframe{width:min(100%,1000px);height:100%;border:none;border-radius:8px;background:#fff}
-.pv-text{
-  width:min(100%,1000px);height:100%;overflow:auto;background:var(--panel);color:var(--text);
-  border-radius:10px;padding:18px 20px;font:12.5px/1.7 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  white-space:pre-wrap;word-break:break-word;margin:0;
+.pv-body img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;box-shadow:0 24px 70px rgba(0,0,0,.55);cursor:zoom-in}
+.pv-body img.zoom{max-width:none;max-height:none;cursor:zoom-out;box-shadow:none}
+.pv-body video{max-width:100%;max-height:100%;border-radius:10px;background:#000;box-shadow:0 24px 70px rgba(0,0,0,.5)}
+.pv-body iframe{width:min(100%,1080px);height:100%;border:none;border-radius:10px;background:#fff}
+.pv-sheet{width:min(100%,1080px);height:100%;background:var(--panel);border-radius:10px;overflow:auto}
+
+/* 文档（Markdown / 纯文本 / docx 抽文） */
+.pv-doc{
+  width:min(100%,900px);height:100%;background:var(--panel);color:var(--text);border-radius:10px;
+  overflow:auto;padding:34px 44px 60px;font-size:14px;line-height:1.8;
+  box-shadow:0 24px 70px rgba(0,0,0,.45);
 }
-.pv-loading{color:#fff;opacity:.7;font-size:13px;display:flex;align-items:center;gap:10px}
+.pv-doc>*:first-child{margin-top:0}
+.pv-doc h1,.pv-doc h2,.pv-doc h3,.pv-doc h4{margin:1.5em 0 .6em;line-height:1.4;font-weight:650}
+.pv-doc h1{font-size:22px;border-bottom:1px solid var(--border);padding-bottom:.4em}
+.pv-doc h2{font-size:18px;border-bottom:1px solid var(--border2);padding-bottom:.3em}
+.pv-doc h3{font-size:15.5px}
+.pv-doc h4{font-size:14px}
+.pv-doc p{margin:.7em 0}
+.pv-doc ul,.pv-doc ol{margin:.6em 0;padding-left:1.6em}
+.pv-doc li{margin:.25em 0}
+.pv-doc code{background:var(--hover);border:1px solid var(--border2);border-radius:5px;padding:1px 5px;font:12.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.pv-doc pre{background:var(--panel2);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;overflow:auto;margin:.9em 0}
+.pv-doc pre code{background:none;border:none;padding:0;font-size:12.5px;line-height:1.7}
+.pv-doc blockquote{margin:.9em 0;padding:.2em 0 .2em 14px;border-left:3px solid var(--accent);color:var(--text2)}
+.pv-doc a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(79,70,229,.35)}
+.pv-doc a:hover{border-bottom-color:var(--accent)}
+.pv-doc hr{border:none;border-top:1px solid var(--border);margin:1.6em 0}
+.pv-doc img{max-width:100%;border-radius:6px;cursor:default}
+.pv-doc table{border-collapse:collapse;margin:.9em 0;font-size:13px;display:block;overflow:auto}
+.pv-doc th,.pv-doc td{border:1px solid var(--border);padding:6px 12px;text-align:left}
+.pv-doc th{background:var(--panel2);font-weight:600}
+.pv-plain{
+  width:min(100%,900px);height:100%;background:var(--panel);color:var(--text);border-radius:10px;
+  overflow:auto;padding:24px 28px;margin:0;white-space:pre-wrap;word-break:break-word;
+  font:13px/1.75 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+
+/* 代码：行号 + 自动换行 */
+.pv-code{
+  width:min(100%,1080px);height:100%;margin:0;background:var(--panel);color:var(--text);
+  border:1px solid var(--border);border-radius:10px;overflow:auto;padding:14px 0;
+  font:12.5px/1.7 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;tab-size:4;
+}
+.pv-code .cl{display:block;padding-right:18px;white-space:pre-wrap;word-break:break-word}
+.pv-code .cl:hover{background:var(--hover)}
+.pv-code .ln{display:inline-block;width:52px;padding-right:14px;text-align:right;color:var(--text3);user-select:none}
+
+/* CSV / 表格 */
+.pv-tbl{border-collapse:collapse;font-size:12.5px;background:var(--panel);width:max-content;min-width:60%}
+.pv-tbl th,.pv-tbl td{
+  border:1px solid var(--border);padding:6px 10px;text-align:left;vertical-align:top;
+  max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.pv-tbl th{background:var(--panel2);font-weight:600;position:sticky;top:0;z-index:1}
+.pv-tbl tbody tr:nth-child(even) td{background:var(--panel2)}
+.pv-tblwrap{width:min(100%,1080px);height:100%;overflow:auto;border-radius:10px;background:var(--panel);box-shadow:0 24px 70px rgba(0,0,0,.45)}
+
+/* 音频 */
+.pv-aud{
+  display:flex;flex-direction:column;align-items:center;gap:20px;color:#fff;width:min(100%,440px);
+  padding:28px 24px;border-radius:18px;background:rgba(255,255,255,.07);
+}
+.pv-aud .cover{
+  width:118px;height:118px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--accent2),var(--accent));box-shadow:0 18px 44px rgba(79,70,229,.45);
+}
+.pv-aud .an{font-size:13.5px;font-weight:550;text-align:center;word-break:break-all;line-height:1.5}
+.pv-aud audio{width:100%}
+
+/* 不支持预览 / 报错 */
+.pv-empty{display:flex;flex-direction:column;align-items:center;gap:12px;color:#fff;text-align:center;padding:40px 20px}
+.pv-empty .ico{
+  width:78px;height:78px;border-radius:22px;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.1);
+}
+.pv-empty h4{margin:0;font-size:14px;font-weight:600}
+.pv-empty p{margin:0;font-size:12.5px;opacity:.6;max-width:360px;line-height:1.7}
+.pv-empty button{
+  margin-top:4px;height:36px;padding:0 16px;border-radius:9px;display:flex;align-items:center;gap:7px;
+  background:rgba(255,255,255,.16);color:#fff;font-size:13px;
+}
+.pv-empty button:hover{background:rgba(255,255,255,.26)}
+
+.pv-nav{
+  position:absolute;top:50%;margin-top:-26px;width:38px;height:52px;border-radius:12px;z-index:3;
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  background:rgba(18,21,28,.55);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(8px);
+  transition:.12s;box-shadow:0 6px 20px rgba(0,0,0,.3);
+}
+.pv-nav:hover{background:rgba(18,21,28,.8)}
+.pv-nav[disabled]{opacity:0;pointer-events:none}
+.pv-nav.prev{left:10px}
+.pv-nav.next{right:10px}
+.pv-loading{color:#fff;opacity:.72;font-size:13px;display:flex;align-items:center;gap:10px}
+.pv-note{color:#fff;opacity:.45;font-size:11.5px;margin-top:12px;line-height:1.6;max-width:420px;text-align:center}
+
+@media (max-width:640px){
+  .pv-acts button .lbl{display:none}
+  .pv-acts button{padding:0 9px}
+  .pv-body{padding:0 8px 12px}
+  .pv-doc{padding:20px 18px 40px}
+  .pv-nav{display:none}
+}
+
 .spinner{
   width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.25);
   border-top-color:#fff;animation:spin .7s linear infinite;
@@ -821,27 +924,34 @@ svg{display:block;flex:none}
 <!-- 预览 -->
 <div id="preview" class="hidden">
   <div class="pv-head">
-    <div style="min-width:0">
-      <div class="pv-title" id="pvTitle"></div>
+    <div class="pv-meta">
+      <div class="pv-title" id="pvTitle"><span class="t"></span></div>
       <div class="pv-sub" id="pvSub"></div>
     </div>
     <div class="pv-acts">
-      <button id="pvEdit" class="hidden">
+      <button id="pvEdit" class="hidden" title="用内置编辑器打开">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-        编辑
+        <span class="lbl">编辑</span>
       </button>
-      <button id="pvDl">
+      <button id="pvDl" title="下载到本地">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12m0 0 4.5-4.5M12 16l-4.5-4.5"/><path d="M4 18v1.5A2.5 2.5 0 0 0 6.5 22h11a2.5 2.5 0 0 0 2.5-2.5V18"/></svg>
-        下载
+        <span class="lbl">下载</span>
       </button>
-      <button id="pvClose">
+      <button id="pvClose" title="关闭 (Esc)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-        关闭
+        <span class="lbl">关闭</span>
       </button>
     </div>
   </div>
+  <button class="pv-nav prev" id="pvPrev" title="上一个 (←)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>
+  </button>
+  <button class="pv-nav next" id="pvNext" title="下一个 (→)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+  </button>
   <div class="pv-body" id="pvBody"></div>
 </div>
+
 
 <!-- 编辑器 -->
 <div id="editor" class="hidden">
@@ -1832,14 +1942,13 @@ function bindList(items){
   });
   Array.prototype.forEach.call($("wrap").querySelectorAll(".row"), function(row){
     bindLongPress(row);
+    /* 单击即打开：文件进预览、文件夹进目录。勾选走左侧 tick，多选按住 Ctrl / Cmd / Shift 点击 */
     row.addEventListener("click", function(e){
       if(Date.now() - longPressAt < 700) return;
-      if(e.target.closest(".tick") || e.target.closest("button") || e.target.closest(".nm")) return;
-      toggleSel(row.getAttribute("data-path"), e.shiftKey);
-    });
-    row.addEventListener("dblclick", function(e){
       if(e.target.closest(".tick") || e.target.closest("button")) return;
-      openItem(row.getAttribute("data-path"));
+      var p = row.getAttribute("data-path");
+      if(e.shiftKey || e.ctrlKey || e.metaKey){ toggleSel(p, e.shiftKey); return; }
+      openItem(p);
     });
     row.addEventListener("contextmenu", function(e){
       e.preventDefault();
@@ -1872,9 +1981,12 @@ function bindGrid(){
   });
   Array.prototype.forEach.call($("wrap").querySelectorAll(".card"), function(card){
     bindLongPress(card);
-    card.addEventListener("dblclick", function(e){
+    card.addEventListener("click", function(e){
+      if(Date.now() - longPressAt < 700) return;
       if(e.target.closest("button") || e.target.closest(".tick")) return;
-      openItem(card.getAttribute("data-path"));
+      var p = card.getAttribute("data-path");
+      if(e.shiftKey || e.ctrlKey || e.metaKey){ toggleSel(p, e.shiftKey); return; }
+      openItem(p);
     });
     card.addEventListener("contextmenu", function(e){
       e.preventDefault();
@@ -2175,66 +2287,551 @@ async function saveEditor(){
   }
 }
 
-/* ================= 预览 ================= */
-var pvUrl = null;
-var TEXT_MAX = 2 * 1024 * 1024;
+/* ================= 预览 =================
+   单击即预览：图片 / 视频 / 音频 / PDF / 网页 / Markdown / JSON / CSV / 代码 / 纯文本 /
+   docx / xlsx / pptx。媒体走签名直链，浏览器原生 Range 边下边播，不再把整个文件读进内存。 */
+var PV = { list: [], idx: 0, it: null, seq: 0, tokens: {} };
+var PV_TEXT_MAX = 6 * 1024 * 1024;
+var PV_OFFICE_MAX = 24 * 1024 * 1024;
+var NL = String.fromCharCode(10), TAB = String.fromCharCode(9);
+
+function pvSet(s){
+  var o = {};
+  s.split(",").forEach(function(x){ if(x) o[x] = 1; });
+  return o;
+}
+var PV_EXT = {
+  img: pvSet("avif,bmp,gif,heic,ico,jfif,jpeg,jpg,png,svg,tif,tiff,webp"),
+  vid: pvSet("avi,flv,m4v,mkv,mov,mp4,ogv,webm,wmv"),
+  aud: pvSet("aac,flac,m4a,mp3,oga,ogg,opus,wav,wma"),
+  pdf: pvSet("pdf"),
+  md: pvSet("md,markdown"),
+  json: pvSet("json,json5,ipynb"),
+  csv: pvSet("csv,tsv"),
+  html: pvSet("html,htm,xhtml"),
+  docx: pvSet("docx"),
+  xlsx: pvSet("xlsx,xlsm"),
+  pptx: pvSet("pptx"),
+  text: pvSet("txt,log,ini,conf,cfg,env,properties,srt,vtt,nfo,text,readme,license,gitignore,editorconfig"),
+  code: pvSet("js,mjs,cjs,jsx,ts,tsx,vue,svelte,css,scss,sass,less,styl,py,pyi,go,rs,java,c,cc,cpp,cxx,h,hpp,cs,sh,bash,zsh,fish,ps1,psm1,bat,cmd,yml,yaml,toml,sql,php,rb,swift,kt,kts,xml,gradle,lua,dart,r,pl,pm,tex,proto,graphql,gql,cmake,mk,make,dockerfile,nginx,service,plist,lock")
+};
+var PV_LABEL = {
+  img: "图片", vid: "视频", aud: "音频", pdf: "PDF 文档", md: "Markdown",
+  json: "JSON", csv: "表格", html: "网页", docx: "Word 文档", xlsx: "Excel 表格",
+  pptx: "演示文稿", text: "文本", code: "代码"
+};
+var PV_EDITABLE = { md: 1, json: 1, csv: 1, text: 1, code: 1, html: 1 };
+
+function extOf(name){
+  var i = String(name).lastIndexOf(".");
+  return i > 0 ? String(name).slice(i + 1).toLowerCase() : "";
+}
+function pvModeOf(it){
+  if(it.isDir) return "none";
+  var e = extOf(it.name);
+  if(PV_EXT.img[e]) return "img";
+  if(PV_EXT.vid[e]) return "vid";
+  if(PV_EXT.aud[e]) return "aud";
+  if(PV_EXT.pdf[e]) return "pdf";
+  if(PV_EXT.md[e]) return "md";
+  if(PV_EXT.json[e]) return "json";
+  if(PV_EXT.csv[e]) return "csv";
+  if(PV_EXT.html[e]) return "html";
+  if(PV_EXT.docx[e]) return "docx";
+  if(PV_EXT.xlsx[e]) return "xlsx";
+  if(PV_EXT.pptx[e]) return "pptx";
+  if(PV_EXT.text[e]) return "text";
+  if(PV_EXT.code[e]) return "code";
+  if(!e && /^(makefile|dockerfile|license|readme|changelog)$/i.test(it.name)) return "code";
+  return "none";
+}
+
+/* 预览直链：带 Basic 换签名地址，过期前复用 */
+function pvUrl(path){
+  var c = PV.tokens[path];
+  if(c && c.exp - 60000 > Date.now()) return Promise.resolve(c.url);
+  return fetch(location.origin + "/__api/preview", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ path: path })
+  }).then(function(r){
+    if(r.status === 401){ logout("登录已失效"); throw new Error("登录已失效"); }
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }).then(function(j){
+    PV.tokens[path] = { url: j.url, exp: j.expiresAt || 0 };
+    return j.url;
+  });
+}
 
 function closePreview(){
-  $("preview").classList.add("hidden");
-  if(pvUrl){ URL.revokeObjectURL(pvUrl); pvUrl = null; }
+  PV.seq++;
+  PV.it = null;
   $("pvBody").innerHTML = "";
+  $("preview").classList.add("hidden");
 }
 
-async function preview(it){
+function preview(it){
+  if(!it || it.isDir){ return; }
+  PV.it = it;
+  PV.openedAt = Date.now();
+  var files = visibleItems().filter(function(x){ return !x.isDir; });
+  var idx = -1;
+  for(var i = 0; i < files.length; i++){ if(files[i].path === it.path){ idx = i; break; } }
+  if(idx < 0){ files = [it]; idx = 0; }
+  PV.list = files;
+  PV.idx = idx;
   $("preview").classList.remove("hidden");
-  $("pvTitle").textContent = it.name;
-  $("pvSub").textContent = fmtSize(it.size) + " · " + fmtTimeFull(it.mtime);
-  $("pvBody").innerHTML = '<div class="pv-loading"><span class="spinner"></span>载入中…</div>';
-  var editable = it.kind === "code" || it.kind === "doc" || it.ctype.indexOf("text/") === 0 || /\\.(txt|md|markdown|json|log|ini|conf|csv|xml|yml|yaml)$/i.test(it.name);
-  $("pvEdit").classList.toggle("hidden", !editable);
-  $("pvEdit").onclick = async function(){
-    closePreview();
-    await editExisting(it);
-  };
-  $("pvDl").onclick = function(){ download(it.path); };
+  pvPaint();
+}
 
+function pvStep(d){
+  if(PV.list.length < 2) return;
+  PV.idx = (PV.idx + d + PV.list.length) % PV.list.length;
+  PV.it = PV.list[PV.idx];
+  pvPaint();
+}
+
+function pvPaint(){
+  var it = PV.it;
+  if(!it) return;
+  var mode = pvModeOf(it);
+  var n = PV.list.length;
+  var parts = [fmtSize(it.size), fmtTimeFull(it.mtime)];
+  if(PV_LABEL[mode]) parts.push(PV_LABEL[mode]);
+  if(n > 1) parts.push((PV.idx + 1) + " / " + n);
+  $("pvTitle").querySelector(".t").textContent = it.name;
+  $("pvSub").textContent = parts.join(" · ");
+  $("pvEdit").classList.toggle("hidden", !PV_EDITABLE[mode]);
+  $("pvEdit").onclick = async function(){ var cur = PV.it; closePreview(); await editExisting(cur); };
+  $("pvDl").onclick = function(){ download(it.path); };
+  $("pvPrev").disabled = n < 2;
+  $("pvNext").disabled = n < 2;
+  pvRender();
+}
+
+async function pvRender(){
+  var it = PV.it, box = $("pvBody");
+  var seq = ++PV.seq;
+  var mode = pvModeOf(it);
+  box.scrollTop = 0;
+  box.innerHTML = '<div class="pv-loading"><span class="spinner"></span>载入中…</div>';
   try {
-    if(it.kind === "img"){
-      var rb = await fetch(location.origin + urlPath(it.path), { headers: authHeaders() });
-      if(!rb.ok) throw new Error("HTTP " + rb.status);
-      var bb = await rb.blob();
-      pvUrl = URL.createObjectURL(bb);
-      $("pvBody").innerHTML = '<img src="' + pvUrl + '" alt="' + esc(it.name) + '">';
+    if(mode === "none"){ pvFallback(it); return; }
+
+    if(mode === "img"){
+      var u = await pvUrl(it.path);
+      if(seq !== PV.seq) return;
+      box.innerHTML = '<img alt="' + esc(it.name) + '" src="' + u + '">';
+      var im = box.querySelector("img");
+      im.onclick = function(){ im.classList.toggle("zoom"); };
+      im.onerror = function(){
+        pvFallback(it, "预览失败", "浏览器无法解码这张图片（HEIC / TIFF 等格式需要下载后用本地应用打开）。");
+      };
       return;
     }
-    if(it.kind === "vid" || it.kind === "aud" || it.ctype === "application/pdf"){
-      var rr = await fetch(location.origin + urlPath(it.path), { headers: authHeaders() });
-      if(!rr.ok) throw new Error("HTTP " + rr.status);
-      var bl = await rr.blob();
-      pvUrl = URL.createObjectURL(bl);
-      if(it.kind === "vid") $("pvBody").innerHTML = '<video src="' + pvUrl + '" controls autoplay playsinline></video>';
-      else if(it.kind === "aud") $("pvBody").innerHTML = '<audio src="' + pvUrl + '" controls autoplay></audio>';
-      else $("pvBody").innerHTML = '<iframe src="' + pvUrl + '"></iframe>';
+
+    if(mode === "vid"){
+      var uv = await pvUrl(it.path);
+      if(seq !== PV.seq) return;
+      box.innerHTML = '<video src="' + uv + '" controls autoplay playsinline preload="metadata"></video>';
+      var vd = box.querySelector("video");
+      if(vd) vd.onerror = function(){
+        pvFallback(it, "预览失败", "这个视频的编码浏览器放不了（常见于 RMVB / WMV / 部分 MKV），下载后用本地播放器可以正常看。");
+      };
       return;
     }
-    if(editable && it.size <= TEXT_MAX){
-      var rt = await fetch(location.origin + urlPath(it.path), { headers: authHeaders() });
+
+    if(mode === "aud"){
+      var ua = await pvUrl(it.path);
+      if(seq !== PV.seq) return;
+      box.innerHTML = '<div class="pv-aud"><div class="cover">' + iconSvg("aud", 46) + '</div>' +
+        '<div class="an">' + esc(it.name) + '</div><audio src="' + ua + '" controls autoplay></audio></div>';
+      return;
+    }
+
+    if(mode === "pdf" || mode === "html"){
+      var up = await pvUrl(it.path);
+      if(seq !== PV.seq) return;
+      box.innerHTML = mode === "pdf"
+        ? '<iframe src="' + up + '" title="' + esc(it.name) + '"></iframe>'
+        : '<iframe src="' + up + '" title="' + esc(it.name) + '" sandbox="allow-scripts allow-popups allow-forms"></iframe>';
+      return;
+    }
+
+    if(mode === "md" || mode === "json" || mode === "csv" || mode === "text" || mode === "code"){
+      if(it.size > PV_TEXT_MAX){ pvFallback(it, "文件太大", "超过 6 MB 的文本在线渲染会让页面卡死，建议下载后查看。"); return; }
+      var ut = await pvUrl(it.path);
+      var rt = await fetch(ut);
       if(!rt.ok) throw new Error("HTTP " + rt.status);
-      var txt = await rt.text();
-      $("pvBody").innerHTML = '<pre class="pv-text">' + esc(txt) + '</pre>';
-      $("pvBody").dataset.text = "1";
+      var text = await rt.text();
+      if(seq !== PV.seq) return;
+      if(mode === "csv"){
+        box.innerHTML = '<div class="pv-tblwrap">' + pvTable(text, extOf(it.name) === "tsv" ? TAB : ",") + '</div>';
+      } else if(mode === "md"){
+        box.innerHTML = '<div class="pv-doc">' + pvMd(text) + '</div>';
+      } else if(mode === "json"){
+        var pretty = text;
+        try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch(e){}
+        box.innerHTML = pvCode(pretty);
+      } else if(mode === "code"){
+        box.innerHTML = pvCode(text);
+      } else {
+        box.innerHTML = '<pre class="pv-plain">' + esc(text) + '</pre>';
+      }
       return;
     }
-    $("pvBody").innerHTML = '<div class="pv-loading" style="flex-direction:column;gap:16px">' +
-      '<div style="opacity:.8">该文件类型不支持在线预览</div>' +
-      '<button class="pv-acts" style="background:rgba(255,255,255,.14);height:34px;padding:0 14px;border-radius:8px;color:#fff;display:flex;align-items:center;gap:6px" id="pvDl2">下载文件</button>' +
-      '</div>';
-    var d2 = $("pvDl2");
-    if(d2) d2.onclick = function(){ download(it.path); };
+
+    if(mode === "docx" || mode === "xlsx" || mode === "pptx"){
+      if(it.size > PV_OFFICE_MAX){ pvFallback(it, "文件太大", "超过 24 MB 的 Office 文件在线解析会占用大量内存，建议下载后查看。"); return; }
+      if(typeof DecompressionStream === "undefined"){
+        pvFallback(it, "浏览器不支持", "当前浏览器不支持在线解压预览，请升级浏览器或下载后查看。");
+        return;
+      }
+      var uo = await pvUrl(it.path);
+      var ab = await (await fetch(uo)).arrayBuffer();
+      if(seq !== PV.seq) return;
+      var zip = pvZipList(ab);
+      if(mode === "docx"){
+        box.innerHTML = '<div class="pv-doc">' + pvDocxHtml(await pvZipText(zip, "word/document.xml")) + '</div>';
+      } else if(mode === "xlsx"){
+        box.innerHTML = '<div class="pv-tblwrap">' + await pvXlsxHtml(zip) + '</div>';
+      } else {
+        box.innerHTML = '<div class="pv-doc">' + await pvPptxHtml(zip) + '</div>';
+      }
+      return;
+    }
   } catch(e){
-    $("pvBody").innerHTML = '<div class="pv-loading">预览失败：' + esc(e.message) + '</div>';
+    if(seq !== PV.seq) return;
+    pvFallback(it, "预览失败", e && e.message ? e.message : "未知错误");
   }
 }
+
+function pvFallback(it, title, hint){
+  var e = extOf(it.name);
+  if(!hint){
+    if(e === "doc" || e === "xls" || e === "ppt"){
+      hint = "这是旧版 Office 二进制格式，无法在线解析。下载后用 Office / WPS 打开，或另存为 " + e + "x 再上传即可预览。";
+    } else if(it.kind === "zip"){
+      hint = "压缩包暂不支持在线解包预览，可先下载到本地。";
+    } else if(e === "epub" || e === "rtf" || e === "pages" || e === "key" || e === "numbers"){
+      hint = "该格式需要专用阅读器，可下载后使用本地应用打开。";
+    } else {
+      hint = "浏览器无法直接渲染这种格式，可下载后使用本地应用打开。";
+    }
+  }
+  $("pvBody").innerHTML = '<div class="pv-empty">' +
+    '<div class="ico">' + iconSvg(it.kind, 34) + '</div>' +
+    '<h4>' + esc(title || "暂不支持在线预览") + '</h4>' +
+    '<p>' + esc(hint) + '</p>' +
+    '<button id="pvDl2">下载文件（' + fmtSize(it.size) + '）</button>' +
+    '</div>';
+  var b = $("pvDl2");
+  if(b) b.onclick = function(){ download(it.path); };
+}
+
+/* ---------- 代码 / 表格 / Markdown ---------- */
+function pvCode(text){
+  var lines = String(text).split(/\\r?\\n/);
+  var cap = Math.min(lines.length, 8000);
+  var h = '<pre class="pv-code">';
+  for(var i = 0; i < cap; i++){
+    h += '<span class="cl"><span class="ln">' + (i + 1) + '</span>' + esc(lines[i] || " ") + '</span>';
+  }
+  if(lines.length > cap) h += '<span class="cl"><span class="ln">…</span>已截断，共 ' + lines.length + ' 行</span>';
+  return h + '</pre>';
+}
+
+function pvCsv(text, sep){
+  var rows = [], row = [], cur = "", q = false, ch;
+  for(var i = 0; i < text.length; i++){
+    ch = text.charAt(i);
+    if(q){
+      if(ch === '"'){
+        if(text.charAt(i + 1) === '"'){ cur += '"'; i++; }
+        else q = false;
+      } else cur += ch;
+    } else if(ch === '"'){ q = true; }
+    else if(ch === sep){ row.push(cur); cur = ""; }
+    else if(ch === NL || ch === String.fromCharCode(13)){
+      if(ch === String.fromCharCode(13) && text.charAt(i + 1) === NL) i++;
+      row.push(cur); rows.push(row); row = []; cur = "";
+      if(rows.length >= 600) return rows;
+    } else cur += ch;
+  }
+  if(cur !== "" || row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+
+function pvTable(text, sep){
+  var rows = pvCsv(text, sep);
+  if(!rows.length) return '<div style="padding:24px;color:var(--text3)">空表格</div>';
+  var cols = 0;
+  rows.forEach(function(r){ if(r.length > cols) cols = r.length; });
+  cols = Math.min(cols, 60);
+  var h = '<table class="pv-tbl">';
+  for(var i = 0; i < rows.length; i++){
+    var tag = i === 0 ? "th" : "td";
+    h += "<tr>";
+    for(var c = 0; c < cols; c++) h += "<" + tag + ">" + esc(rows[i][c] || "") + "</" + tag + ">";
+    h += "</tr>";
+  }
+  h += "</table>";
+  if(rows.length >= 600) h += '<div style="padding:10px 14px;color:var(--text3);font-size:12px">仅显示前 600 行</div>';
+  return h;
+}
+
+function pvInline(s){
+  var out = esc(s);
+  out = out.replace(/\\x60([^\\x60]+)\\x60/g, "<code>$1</code>");
+  out = out.replace(/\\*\\*([^*]+)\\*\\*/g, "<strong>$1</strong>");
+  out = out.replace(/(^|[^*])\\*([^*]+)\\*/g, "$1<em>$2</em>");
+  out = out.replace(/!\\[([^\\]]*)\\]\\(([^)\\s]+)\\)/g, function(m, alt, src){
+    return /^(https?:|data:image\\/)/i.test(src) ? '<img alt="' + alt + '" src="' + src + '">' : alt;
+  });
+  out = out.replace(/\\[([^\\]]+)\\]\\(([^)\\s]+)\\)/g, function(m, t, u){
+    if(!/^(https?:|mailto:|#)/i.test(u)) return t;
+    return '<a href="' + u + '" target="_blank" rel="noopener noreferrer">' + t + '</a>';
+  });
+  return out;
+}
+
+function pvMd(src){
+  var lines = String(src).split(/\\r?\\n/);
+  var out = [], code = null, i = 0;
+  function flush(){ if(code){ out.push("<pre><code>" + esc(code.join(NL)) + "</code></pre>"); code = null; } }
+  while(i < lines.length){
+    var ln = lines[i];
+    if(/^\\s*(\\x60{3}|~~~)/.test(ln)){
+      if(code) flush(); else code = [];
+      i++; continue;
+    }
+    if(code){ code.push(ln); i++; continue; }
+    if(/^\\s*$/.test(ln)){ i++; continue; }
+    var hm = /^(#{1,6})\\s+(.*)$/.exec(ln);
+    if(hm){
+      var lv = hm[1].length;
+      out.push("<h" + lv + ">" + pvInline(hm[2]) + "</h" + lv + ">");
+      i++; continue;
+    }
+    if(/^\\s*([-*_])\\s*\\1\\s*\\1[\\s\\-*_]*$/.test(ln)){ out.push("<hr>"); i++; continue; }
+    if(/^\\s*>/.test(ln)){
+      var q = [];
+      while(i < lines.length && /^\\s*>/.test(lines[i])){ q.push(lines[i].replace(/^\\s*>\\s?/, "")); i++; }
+      out.push("<blockquote>" + pvMd(q.join(NL)) + "</blockquote>");
+      continue;
+    }
+    if(/^\\s*\\|.*\\|\\s*$/.test(ln)){
+      var trs = [];
+      while(i < lines.length && /^\\s*\\|.*\\|\\s*$/.test(lines[i])){ trs.push(lines[i]); i++; }
+      var cells = trs.map(function(r){
+        return r.trim().replace(/^\\|/, "").replace(/\\|$/, "").split("|").map(function(c){ return c.trim(); });
+      });
+      var hasSep = cells.length > 1 && cells[1].every(function(c){ return /^:?-{2,}:?$/.test(c) || c === ""; });
+      var tb = "<table>";
+      for(var ri = 0; ri < cells.length; ri++){
+        if(hasSep && ri === 1) continue;
+        tb += "<tr>";
+        for(var ci = 0; ci < cells[ri].length; ci++){
+          var tg = (ri === 0 || (hasSep && ri === 2)) ? "th" : "td";
+          tb += "<" + tg + ">" + pvInline(cells[ri][ci]) + "</" + tg + ">";
+        }
+        tb += "</tr>";
+      }
+      out.push(tb + "</table>");
+      continue;
+    }
+    if(/^\\s*[-*+]\\s+/.test(ln)){
+      var items = [];
+      while(i < lines.length && /^\\s*[-*+]\\s+/.test(lines[i])){
+        items.push(lines[i].replace(/^\\s*[-*+]\\s+/, "")); i++;
+      }
+      out.push("<ul>" + items.map(function(t){ return "<li>" + pvInline(t) + "</li>"; }).join("") + "</ul>");
+      continue;
+    }
+    if(/^\\s*\\d+[.)]\\s+/.test(ln)){
+      var oit = [];
+      while(i < lines.length && /^\\s*\\d+[.)]\\s+/.test(lines[i])){
+        oit.push(lines[i].replace(/^\\s*\\d+[.)]\\s+/, "")); i++;
+      }
+      out.push("<ol>" + oit.map(function(t){ return "<li>" + pvInline(t) + "</li>"; }).join("") + "</ol>");
+      continue;
+    }
+    out.push("<p>" + pvInline(ln) + "</p>");
+    i++;
+  }
+  flush();
+  return out.join("");
+}
+
+/* ---------- OOXML：docx / xlsx / pptx（浏览器内置解压） ---------- */
+var NS_W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+var NS_S = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+var NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main";
+
+function pvXml(text){
+  return new DOMParser().parseFromString(text, "application/xml");
+}
+
+function pvZipList(buf){
+  var u8 = new Uint8Array(buf), dv = new DataView(buf);
+  var eocd = -1, min = Math.max(0, u8.length - 66000);
+  for(var i = u8.length - 22; i >= min; i--){
+    if(dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; }
+  }
+  if(eocd < 0) throw new Error("不是标准的 Office (ZIP) 文件，无法解析");
+  var count = dv.getUint16(eocd + 10, true), off = dv.getUint32(eocd + 16, true), list = [];
+  for(var n = 0; n < count; n++){
+    if(off + 46 > u8.length || dv.getUint32(off, true) !== 0x02014b50) break;
+    var method = dv.getUint16(off + 10, true);
+    var csize = dv.getUint32(off + 20, true);
+    var nlen = dv.getUint16(off + 28, true), elen = dv.getUint16(off + 30, true), clen = dv.getUint16(off + 32, true);
+    var lho = dv.getUint32(off + 42, true);
+    var name = new TextDecoder().decode(u8.subarray(off + 46, off + 46 + nlen));
+    list.push({ name: name, method: method, csize: csize, lho: lho });
+    off += 46 + nlen + elen + clen;
+  }
+  return { u8: u8, dv: dv, list: list };
+}
+
+function pvZipFind(zip, name){
+  for(var i = 0; i < zip.list.length; i++){ if(zip.list[i].name === name) return zip.list[i]; }
+  return null;
+}
+
+async function pvZipBytes(zip, entry){
+  var dv = zip.dv, off = entry.lho;
+  if(dv.getUint32(off, true) !== 0x04034b50) throw new Error("ZIP 条目损坏");
+  var nlen = dv.getUint16(off + 26, true), elen = dv.getUint16(off + 28, true);
+  var start = off + 30 + nlen + elen;
+  var data = zip.u8.subarray(start, start + entry.csize);
+  if(entry.method === 0) return data;
+  var stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function pvZipText(zip, name){
+  var e = pvZipFind(zip, name);
+  if(!e) return "";
+  return new TextDecoder().decode(await pvZipBytes(zip, e));
+}
+
+function pvDocxHtml(xml){
+  if(!xml) return "<p>文档内容为空。</p>";
+  var doc;
+  try { doc = pvXml(xml); } catch(e){ return "<p>文档解析失败。</p>"; }
+  var ps = doc.getElementsByTagNameNS(NS_W, "p");
+  if(!ps.length) ps = doc.getElementsByTagName("w:p");
+  var out = "", count = 0;
+  for(var i = 0; i < ps.length && count < 4000; i++){
+    var ts = ps[i].getElementsByTagNameNS(NS_W, "t");
+    var text = "";
+    for(var j = 0; j < ts.length; j++) text += ts[j].textContent || "";
+    if(!text.trim()) continue;
+    count++;
+    var style = "";
+    var st = ps[i].getElementsByTagNameNS(NS_W, "pStyle")[0];
+    if(st) style = st.getAttributeNS(NS_W, "val") || st.getAttribute("w:val") || "";
+    var lv = 0;
+    var hm = /^Heading(\\d)$/i.exec(style) || /^标题\\s*(\\d)$/.exec(style);
+    if(hm) lv = Math.min(4, parseInt(hm[1], 10) || 1);
+    else if(/^Title$/i.test(style)) lv = 1;
+    out += lv ? "<h" + lv + ">" + esc(text) + "</h" + lv + ">" : "<p>" + esc(text) + "</p>";
+  }
+  if(!count) return "<p>没有提取到文字内容（文档可能整篇都是图片或扫描件）。</p>";
+  return out;
+}
+
+function pvColIndex(ref){
+  var m = /^([A-Z]+)/.exec(ref || "");
+  if(!m) return -1;
+  var n = 0;
+  for(var i = 0; i < m[1].length; i++) n = n * 26 + (m[1].charCodeAt(i) - 64);
+  return n - 1;
+}
+
+async function pvXlsxHtml(zip){
+  var shared = [];
+  var ss = await pvZipText(zip, "xl/sharedStrings.xml");
+  if(ss){
+    var sdoc = pvXml(ss);
+    var sis = sdoc.getElementsByTagNameNS(NS_S, "si");
+    for(var i = 0; i < sis.length; i++){
+      var ts = sis[i].getElementsByTagNameNS(NS_S, "t"), s = "";
+      for(var j = 0; j < ts.length; j++) s += ts[j].textContent || "";
+      shared.push(s);
+    }
+  }
+  var sheet = null;
+  for(var k = 0; k < zip.list.length; k++){
+    if(/^xl\\/worksheets\\/sheet\\d+\\.xml$/.test(zip.list[k].name)){ sheet = zip.list[k].name; break; }
+  }
+  if(!sheet) return '<div style="padding:24px;color:var(--text3)">没有找到工作表</div>';
+  var doc = pvXml(await pvZipText(zip, sheet));
+  var rows = doc.getElementsByTagNameNS(NS_S, "row");
+  var grid = [], maxCol = 0;
+  for(var r = 0; r < rows.length && r < 400; r++){
+    var cells = rows[r].getElementsByTagNameNS(NS_S, "c");
+    var line = [];
+    for(var c = 0; c < cells.length; c++){
+      var cell = cells[c];
+      var col = pvColIndex(cell.getAttribute("r") || "");
+      if(col < 0) col = line.length;
+      if(col > 59) continue;
+      var t = cell.getAttribute("t") || "";
+      var val = "", node;
+      if(t === "s"){
+        node = cell.getElementsByTagNameNS(NS_S, "v")[0];
+        val = node ? (shared[parseInt(node.textContent || "0", 10)] || "") : "";
+      } else if(t === "inlineStr"){
+        node = cell.getElementsByTagNameNS(NS_S, "t")[0];
+        val = node ? (node.textContent || "") : "";
+      } else {
+        node = cell.getElementsByTagNameNS(NS_S, "v")[0];
+        val = node ? (node.textContent || "") : "";
+      }
+      while(line.length < col) line.push("");
+      line[col] = val;
+      if(col + 1 > maxCol) maxCol = col + 1;
+    }
+    grid.push(line);
+  }
+  if(!grid.length) return '<div style="padding:24px;color:var(--text3)">工作表是空的</div>';
+  var h = '<table class="pv-tbl">';
+  for(var ri = 0; ri < grid.length; ri++){
+    var tag = ri === 0 ? "th" : "td";
+    h += "<tr>";
+    for(var ci = 0; ci < maxCol; ci++) h += "<" + tag + ">" + esc(grid[ri][ci] || "") + "</" + tag + ">";
+    h += "</tr>";
+  }
+  h += "</table>";
+  if(rows.length > 400) h += '<div style="padding:10px 14px;color:var(--text3);font-size:12px">仅显示前 400 行，共 ' + rows.length + ' 行</div>';
+  return h;
+}
+
+async function pvPptxHtml(zip){
+  var slides = zip.list.filter(function(e){ return /^ppt\\/slides\\/slide\\d+\\.xml$/.test(e.name); });
+  slides.sort(function(a, b){
+    var na = parseInt((/(\\d+)/.exec(a.name) || [0, "0"])[1], 10);
+    var nb = parseInt((/(\\d+)/.exec(b.name) || [0, "0"])[1], 10);
+    return na - nb;
+  });
+  if(!slides.length) return "<p>没有找到幻灯片。</p>";
+  var out = "";
+  for(var i = 0; i < slides.length && i < 100; i++){
+    var doc = pvXml(await pvZipText(zip, slides[i].name));
+    var ps = doc.getElementsByTagNameNS(NS_A, "p");
+    var body = "";
+    for(var j = 0; j < ps.length; j++){
+      var ts = ps[j].getElementsByTagNameNS(NS_A, "t"), line = "";
+      for(var k = 0; k < ts.length; k++) line += ts[k].textContent || "";
+      if(line.trim()) body += "<p>" + esc(line) + "</p>";
+    }
+    out += "<h3>第 " + (i + 1) + " 页</h3>" + (body || '<p style="opacity:.5">本页没有可提取的文字</p>');
+  }
+  return out;
+}
+
 
 async function editExisting(it){
   try {
@@ -2666,9 +3263,30 @@ function bindGlobal(){
   $("qClr").onclick = function(){ $("q").value = ""; S.q = ""; $("qClr").classList.add("hidden"); render(); };
 
   $("pvClose").onclick = closePreview;
+  $("pvPrev").onclick = function(){ pvStep(-1); };
+  $("pvNext").onclick = function(){ pvStep(1); };
   $("preview").addEventListener("click", function(e){
+    /* 双击文件时第二次点击会落在刚弹出来的遮罩上，400ms 内不响应，避免开了又立刻关掉 */
+    if(Date.now() - (PV.openedAt || 0) < 400) return;
     if(e.target === $("preview") || e.target === $("pvBody")) closePreview();
   });
+
+  /* 手机上没有箭头，左右滑动切换上一个 / 下一个 */
+  var pvSx = 0, pvSy = 0, pvMoved = false;
+  $("pvBody").addEventListener("touchstart", function(e){
+    var t = e.touches[0];
+    if(!t) return;
+    pvSx = t.clientX; pvSy = t.clientY; pvMoved = false;
+  }, { passive: true });
+  $("pvBody").addEventListener("touchmove", function(){ pvMoved = true; }, { passive: true });
+  $("pvBody").addEventListener("touchend", function(e){
+    if(!pvMoved) return;
+    var t = e.changedTouches[0];
+    if(!t) return;
+    if(e.target.closest(".pv-tblwrap") || e.target.closest(".pv-code")) return;
+    var dx = t.clientX - pvSx, dy = t.clientY - pvSy;
+    if(Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2) pvStep(dx > 0 ? -1 : 1);
+  }, { passive: true });
 
   $("edCancel").onclick = closeEditor;
   $("edSave").onclick = saveEditor;
@@ -2715,7 +3333,11 @@ function bindGlobal(){
       if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s"){ e.preventDefault(); saveEditor(); }
       return;
     }
-    if(!$("preview").classList.contains("hidden")) return;
+    if(!$("preview").classList.contains("hidden")){
+      if(e.key === "ArrowLeft"){ e.preventDefault(); pvStep(-1); }
+      else if(e.key === "ArrowRight"){ e.preventDefault(); pvStep(1); }
+      return;
+    }
     if(inField) return;
     if(!S.auth) return;
 

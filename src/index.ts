@@ -46,6 +46,7 @@ import { renderUi } from "./ui";
 import { handleShareApi, handleShareRoute, isSharePath } from "./share-api";
 import { clearDirStatCache, handleDirStatApi, statDirTree } from "./dirstat";
 import { checkSpace, handleQuotaApi, insufficientStorage, invalidateUsage } from "./quota";
+import { handlePreviewApi, verifyPreviewToken } from "./preview";
 
 export { LockDO } from "./lock";
 export { ShareDO } from "./share";
@@ -70,6 +71,10 @@ async function route(request: Request, env: Env): Promise<Response> {
   const method = request.method.toUpperCase();
 
   if (method === "OPTIONS") return handleOptions(request);
+
+  /* 预览签名直链：<video>/<audio>/<iframe> 带不上 Authorization 头，
+     用短期 HMAC 令牌代替凭据。必须先于 Basic 认证，否则播放器拿到 401 就废了。 */
+  if (url.pathname.startsWith("/__p/")) return handleSignedPreview(request, env, url);
 
   /* 外链分享：/s/:id 页面与 /__s/:id/* 数据接口。权限完全由分享记录 + 提取码令牌决定，
      必须先于 Basic 认证处理，否则没凭据的访客会被 401 拦住。 */
@@ -111,6 +116,10 @@ async function route(request: Request, env: Env): Promise<Response> {
   /* 容量配额：已用 / 10 GB，硬上限 9.9 GB */
   const quota = await handleQuotaApi(request, env, url);
   if (quota) return quota;
+
+  /* 预览直链签发：用 Basic 凭据换一个短期签名地址 */
+  const previewApi = await handlePreviewApi(request, env, url);
+  if (previewApi) return previewApi;
 
   const path = normalizePath(url.pathname);
 
@@ -192,6 +201,39 @@ function handleOptions(request: Request): Response {
     headers["Access-Control-Max-Age"] = "86400";
   }
   return new Response(null, { status: 200, headers });
+}
+
+/* ================================================================== */
+/* 预览签名直链                                                        */
+/* ================================================================== */
+
+/**
+ * GET /__p/<token>
+ *
+ * 令牌把路径本身也签进去，所以拿不到别人的文件；过期时间 2 小时。
+ * 这里直接复用 handleGet，Range / ETag / 206 全部照旧，
+ * 只额外把 Content-Disposition 改成 inline —— 即使上传时被标成 attachment，
+ * 在预览器里也要内联渲染而不是触发下载。
+ */
+async function handleSignedPreview(request: Request, env: Env, url: URL): Promise<Response> {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return textResponse(405, "Method Not Allowed", { Allow: "GET, HEAD" });
+  }
+  const token = url.pathname.slice("/__p/".length);
+  const path = await verifyPreviewToken(env, token);
+  if (!path) return textResponse(403, "预览链接已过期，请刷新页面后重试");
+
+  const res = await handleGet(request, env, path, request.method === "HEAD");
+  if (!res.ok) return res;
+
+  const headers = new Headers(res.headers);
+  const name = baseName(path);
+  headers.set("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(name)}`);
+  headers.set("Cache-Control", "private, max-age=600");
+  if (!headers.get("Content-Type") || headers.get("Content-Type") === "application/octet-stream") {
+    headers.set("Content-Type", mimeOf(name));
+  }
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }
 
 /* ================================================================== */
